@@ -21,7 +21,7 @@ export function KitchenTableCard({
   onSelect,
 }: KitchenTableCardProps) {
   const newest = [...orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-  const total = orders.reduce((sum, order) => sum + order.totalPaise, 0);
+  const total = orders.reduce((sum, order) => sum + (order.total ?? ((order.totalPaise ?? 0) / 100)), 0);
   const stateName = computeVisualState(table, orders);
   const meta = visualMeta[stateName];
 

@@ -39,7 +39,7 @@ export function ProductCard({ item, quantity, disabled, onChange }: ProductCardP
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#9b6d50]">{item.category}</p>
             <h3 className="font-display mt-1 text-[1.35rem] font-semibold leading-tight">{item.name}</h3>
           </div>
-          <p className="whitespace-nowrap font-bold">{formatINR(item.pricePaise)}</p>
+          <p className="whitespace-nowrap font-bold">{formatINR(item.price)}</p>
         </div>
         <p className="mt-2 min-h-12 text-sm leading-6 text-[var(--muted-ink)]">{item.description}</p>
         <div className="mt-4 flex items-center justify-end">

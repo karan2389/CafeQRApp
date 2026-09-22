@@ -20,7 +20,7 @@ function KitchenItemSection({ lines, section }: { lines: OrderLine[]; section: M
               <strong className="mr-2">{item.quantity}×</strong>
               {item.name}
             </p>
-            <p className="whitespace-nowrap font-semibold">{formatINR(item.lineTotalPaise)}</p>
+            <p className="whitespace-nowrap font-semibold">{formatINR(item.lineTotal ?? ((item.lineTotalPaise ?? 0) / 100))}</p>
           </div>
         ))}
       </div>
@@ -67,7 +67,7 @@ export function KitchenOrderCard({
         </div>
         <div className="text-right">
           <p className="text-xs text-[#81766f]">{totalItemCount} items</p>
-          <p className="mt-1 font-display text-xl font-semibold">{formatINR(order.totalPaise)}</p>
+          <p className="mt-1 font-display text-xl font-semibold">{formatINR(order.total ?? ((order.totalPaise ?? 0) / 100))}</p>
         </div>
       </div>
 

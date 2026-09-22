@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronRight, ShoppingBag, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { menuItems } from "@/app/lib/demo-data";
+import { useMenu } from "@/features/menu";
 import { formatINR } from "@/lib/format";
 import { PUFFS_CONFIRMED_STORAGE_KEY, LIMITS } from "@/lib/constants";
 import { useDemoState } from "@/app/lib/use-demo-state";
@@ -21,6 +21,7 @@ import { OrderReviewDialog } from "@/components/customer/order-review-dialog";
 export default function CustomerPage() {
   const { slug } = useParams<{ slug: string }>();
   const { state, commit } = useDemoState();
+  const { items: menuItems } = useMenu();
   const { cart, cartLines, cartQuantity, cartTotal, setQuantity, clearCart } = useCart(slug, menuItems);
 
   const [puffsOpen, setPuffsOpen] = useState(false);
@@ -75,8 +76,8 @@ export default function CustomerPage() {
     commit,
   });
 
-  const mainItems = useMemo(() => menuItems.filter((item) => item.section === "MAIN"), []);
-  const puffItems = useMemo(() => menuItems.filter((item) => item.section === "PUFFS"), []);
+  const mainItems = useMemo(() => menuItems.filter((item) => item.section === "MAIN"), [menuItems]);
+  const puffItems = useMemo(() => menuItems.filter((item) => item.section === "PUFFS"), [menuItems]);
 
   const confirmAge = () => {
     try {
@@ -121,8 +122,10 @@ export default function CustomerPage() {
               customerName: customerName.trim(),
               kitchenNote: kitchenNote.trim(),
               items: cartLines,
-              subtotalPaise: cartTotal,
-              totalPaise: cartTotal,
+              subtotal: cartTotal,
+              total: cartTotal,
+              subtotalPaise: cartTotal * 100,
+              totalPaise: cartTotal * 100,
               status: "NEW",
               createdAt,
               updatedAt: createdAt,

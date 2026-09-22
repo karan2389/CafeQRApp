@@ -6,9 +6,13 @@ export interface OrderLine {
   menuItemId: string;
   section: MenuSection;
   name: string;
-  unitPricePaise: number;
+  unitPrice: number; // Price in Indian Rupees (₹)
   quantity: number;
-  lineTotalPaise: number;
+  lineTotal: number; // Line total in Indian Rupees (₹)
+  /** @deprecated Legacy field preserved for backwards compatibility */
+  unitPricePaise?: number;
+  /** @deprecated Legacy field preserved for backwards compatibility */
+  lineTotalPaise?: number;
 }
 
 export interface DemoOrder {
@@ -19,11 +23,15 @@ export interface DemoOrder {
   customerName: string;
   kitchenNote: string;
   items: OrderLine[];
-  subtotalPaise: number;
-  totalPaise: number;
+  subtotal: number; // Subtotal in Indian Rupees (₹)
+  total: number; // Total in Indian Rupees (₹)
   status: OrderStatus;
   createdAt: string;
   updatedAt: string;
+  /** @deprecated Legacy field preserved for backwards compatibility */
+  subtotalPaise?: number;
+  /** @deprecated Legacy field preserved for backwards compatibility */
+  totalPaise?: number;
 }
 
 export interface CreateOrderInput {

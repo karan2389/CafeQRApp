@@ -9,7 +9,7 @@ export interface RunningBillProps {
 
 export function RunningBill({ orders }: RunningBillProps) {
   if (!orders.length) return null;
-  const total = orders.reduce((sum, order) => sum + order.totalPaise, 0);
+  const total = orders.reduce((sum, order) => sum + (order.total ?? ((order.totalPaise ?? 0) / 100)), 0);
 
   return (
     <section className="mt-12 rounded-[1.7rem] bg-[#2b211c] p-5 text-white sm:p-7">
@@ -44,7 +44,7 @@ export function RunningBill({ orders }: RunningBillProps) {
                 <OrderItems lines={order.items} section="PUFFS" />
               </div>
             </div>
-            <p className="mt-3 text-right text-sm font-bold">{formatINR(order.totalPaise)}</p>
+            <p className="mt-3 text-right text-sm font-bold">{formatINR(order.total ?? ((order.totalPaise ?? 0) / 100))}</p>
           </article>
         ))}
       </div>

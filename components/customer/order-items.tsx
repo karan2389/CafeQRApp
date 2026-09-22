@@ -21,7 +21,7 @@ export function OrderItems({ lines, section }: OrderItemsProps) {
             <span className="mr-2 font-bold">{line.quantity}×</span>
             {line.name}
           </p>
-          <p className="whitespace-nowrap font-semibold">{formatINR(line.lineTotalPaise)}</p>
+          <p className="whitespace-nowrap font-semibold">{formatINR(line.lineTotal)}</p>
         </div>
       ))}
     </div>

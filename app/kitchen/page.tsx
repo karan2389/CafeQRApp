@@ -38,7 +38,7 @@ export default function KitchenPage() {
           description: `${order.customerName} · ${order.items.reduce(
             (sum, item) => sum + item.quantity,
             0
-          )} items · ${formatINR(order.totalPaise)}`,
+          )} items · ${formatINR(order.total ?? ((order.totalPaise ?? 0) / 100))}`,
         }
       );
       if (soundEnabledRef.current) playKitchenAlert(puffsOnly ? "PUFFS" : "STANDARD");
@@ -100,7 +100,7 @@ export default function KitchenPage() {
   const selectedCall = state?.staffCalls.find(
     (call) => call.tableId === selectedTableId && call.status === "PENDING"
   );
-  const tableTotal = selectedOrders.reduce((sum, order) => sum + order.totalPaise, 0);
+  const tableTotal = selectedOrders.reduce((sum, order) => sum + (order.total ?? ((order.totalPaise ?? 0) / 100)), 0);
   const tableQuantity = selectedOrders.reduce(
     (sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
     0

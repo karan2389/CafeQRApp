@@ -44,14 +44,17 @@ export function useCart(slug: string, menuItems: MenuItem[]): UseCartReturn {
     return menuItems.flatMap((item) => {
       const quantity = cart[item.id] ?? 0;
       if (quantity <= 0) return [];
+      const lineTotal = Math.round(item.price * quantity * 100) / 100;
       return [
         {
           menuItemId: item.id,
           section: item.section,
           name: item.name,
-          unitPricePaise: item.pricePaise,
+          unitPrice: item.price,
           quantity,
-          lineTotalPaise: item.pricePaise * quantity,
+          lineTotal,
+          unitPricePaise: item.price * 100,
+          lineTotalPaise: lineTotal * 100,
         },
       ];
     });
@@ -63,7 +66,7 @@ export function useCart(slug: string, menuItems: MenuItem[]): UseCartReturn {
   );
 
   const cartTotal = useMemo(
-    () => cartLines.reduce((sum, line) => sum + line.lineTotalPaise, 0),
+    () => Math.round(cartLines.reduce((sum, line) => sum + line.lineTotal, 0) * 100) / 100,
     [cartLines]
   );
 

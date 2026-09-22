@@ -1,28 +1,61 @@
 import type { DemoOrder, DemoState, MenuItem, OrderLine } from "./types";
 
 export const menuItems: MenuItem[] = [
-  { id: "M001", section: "MAIN", category: "Coffee", name: "Cortado", description: "Double espresso softened with warm textured milk.", pricePaise: 19000, image: "/menu/cortado.svg", available: true },
-  { id: "M002", section: "MAIN", category: "Coffee", name: "Sea Salt Mocha", description: "Dark cocoa, espresso and a delicate sea-salt cream.", pricePaise: 26000, image: "/menu/mocha.svg", available: true },
-  { id: "M003", section: "MAIN", category: "Cold", name: "Citrus Cold Brew", description: "Slow-steeped coffee lifted with orange and tonic.", pricePaise: 24000, image: "/menu/cold-brew.svg", available: true },
-  { id: "M004", section: "MAIN", category: "Breakfast", name: "Forest Toast", description: "Sourdough, whipped feta, mushrooms and herbs.", pricePaise: 32000, image: "/menu/toast.svg", available: true },
-  { id: "M005", section: "MAIN", category: "Bowls", name: "Harvest Grain Bowl", description: "Millets, roasted vegetables, greens and sesame dressing.", pricePaise: 36000, image: "/menu/bowl.svg", available: true },
-  { id: "M006", section: "MAIN", category: "Bakes", name: "Burnt Honey Croissant", description: "Flaky butter pastry glazed with toasted wildflower honey.", pricePaise: 22000, image: "/menu/croissant.svg", available: false },
-  { id: "P001", section: "PUFFS", category: "Puffs", name: "Cool Mint", description: "A crisp, cool profile with a clean finish.", pricePaise: 65000, image: "/menu/puffs.svg", available: true },
-  { id: "P002", section: "PUFFS", category: "Puffs", name: "Berry Ice", description: "Bright berry notes with a chilled finish.", pricePaise: 68000, image: "/menu/puffs.svg", available: true },
-  { id: "P003", section: "PUFFS", category: "Puffs", name: "Citrus Rush", description: "Fresh citrus with a light cooling edge.", pricePaise: 68000, image: "/menu/puffs.svg", available: true },
-  { id: "P004", section: "PUFFS", category: "Puffs", name: "Classic Gold", description: "A mellow, rounded classic profile.", pricePaise: 72000, image: "/menu/puffs.svg", available: false },
+  { id: "M001", section: "MAIN", category: "Coffee", name: "Cortado", description: "Double espresso softened with warm textured milk.", price: 190, image: "/menu/cortado.svg", available: true },
+  { id: "M002", section: "MAIN", category: "Coffee", name: "Sea Salt Mocha", description: "Dark cocoa, espresso and a delicate sea-salt cream.", price: 260, image: "/menu/mocha.svg", available: true },
+  { id: "M003", section: "MAIN", category: "Cold", name: "Citrus Cold Brew", description: "Slow-steeped coffee lifted with orange and tonic.", price: 240, image: "/menu/cold-brew.svg", available: true },
+  { id: "M004", section: "MAIN", category: "Breakfast", name: "Forest Toast", description: "Sourdough, whipped feta, mushrooms and herbs.", price: 320, image: "/menu/toast.svg", available: true },
+  { id: "M005", section: "MAIN", category: "Bowls", name: "Harvest Grain Bowl", description: "Millets, roasted vegetables, greens and sesame dressing.", price: 360, image: "/menu/bowl.svg", available: true },
+  { id: "M006", section: "MAIN", category: "Bakes", name: "Burnt Honey Croissant", description: "Flaky butter pastry glazed with toasted wildflower honey.", price: 220, image: "/menu/croissant.svg", available: false },
+  { id: "P001", section: "PUFFS", category: "Puffs", name: "Cool Mint", description: "A crisp, cool profile with a clean finish.", price: 650, image: "/menu/puffs.svg", available: true },
+  { id: "P002", section: "PUFFS", category: "Puffs", name: "Berry Ice", description: "Bright berry notes with a chilled finish.", price: 680, image: "/menu/puffs.svg", available: true },
+  { id: "P003", section: "PUFFS", category: "Puffs", name: "Citrus Rush", description: "Fresh citrus with a light cooling edge.", price: 680, image: "/menu/puffs.svg", available: true },
+  { id: "P004", section: "PUFFS", category: "Puffs", name: "Classic Gold", description: "A mellow, rounded classic profile.", price: 720, image: "/menu/puffs.svg", available: false },
 ];
 
 const line = (id: string, quantity: number): OrderLine => {
   const item = menuItems.find((entry) => entry.id === id)!;
-  return { menuItemId: item.id, section: item.section, name: item.name, unitPricePaise: item.pricePaise, quantity, lineTotalPaise: item.pricePaise * quantity };
+  const lineTotal = item.price * quantity;
+  return {
+    menuItemId: item.id,
+    section: item.section,
+    name: item.name,
+    unitPrice: item.price,
+    quantity,
+    lineTotal,
+    unitPricePaise: item.price * 100,
+    lineTotalPaise: lineTotal * 100,
+  };
 };
 
-function seedOrder(id: string, tableId: string, name: string, status: DemoOrder["status"], minutesAgo: number, itemIds: Array<[string, number]>, note = ""): DemoOrder {
+function seedOrder(
+  id: string,
+  tableId: string,
+  name: string,
+  status: DemoOrder["status"],
+  minutesAgo: number,
+  itemIds: Array<[string, number]>,
+  note = ""
+): DemoOrder {
   const items = itemIds.map(([itemId, quantity]) => line(itemId, quantity));
-  const total = items.reduce((sum, item) => sum + item.lineTotalPaise, 0);
+  const total = items.reduce((sum, item) => sum + item.lineTotal, 0);
   const time = new Date(Date.now() - minutesAgo * 60_000).toISOString();
-  return { id, orderNumber: `#${id.slice(-4)}`, idempotencyKey: `seed-${id}`, tableId, customerName: name, kitchenNote: note, items, subtotalPaise: total, totalPaise: total, status, createdAt: time, updatedAt: time };
+  return {
+    id,
+    orderNumber: `#${id.slice(-4)}`,
+    idempotencyKey: `seed-${id}`,
+    tableId,
+    customerName: name,
+    kitchenNote: note,
+    items,
+    subtotal: total,
+    total,
+    subtotalPaise: total * 100,
+    totalPaise: total * 100,
+    status,
+    createdAt: time,
+    updatedAt: time,
+  };
 }
 
 export function createInitialState(): DemoState {

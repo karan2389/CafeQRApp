@@ -8,9 +8,9 @@ export const orderLineSchema = z.object({
   menuItemId: z.string().min(1, "Menu item ID is required"),
   section: menuSectionSchema,
   name: z.string().min(1, "Item name is required"),
-  unitPricePaise: z.number().int().nonnegative("Unit price must be non-negative"),
+  unitPrice: z.number().nonnegative("Unit price must be non-negative"),
   quantity: z.number().int().min(1, "Quantity must be at least 1").max(10, "Quantity cannot exceed 10"),
-  lineTotalPaise: z.number().int().nonnegative("Line total must be non-negative"),
+  lineTotal: z.number().nonnegative("Line total must be non-negative"),
 });
 
 export const createOrderSchema = z.object({

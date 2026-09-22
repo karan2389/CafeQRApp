@@ -6,7 +6,7 @@ export interface MenuItem {
   category: string;
   name: string;
   description: string;
-  pricePaise: number;
+  price: number; // Price in Indian Rupees (₹)
   image: string;
   available: boolean;
 }
