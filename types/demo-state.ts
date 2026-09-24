@@ -3,7 +3,7 @@ import type { DemoOrder } from "./orders";
 import type { StaffCall } from "./service-calls";
 
 export interface DemoState {
-  version: 1;
+  version: 2;
   tables: DemoTable[];
   orders: DemoOrder[];
   staffCalls: StaffCall[];

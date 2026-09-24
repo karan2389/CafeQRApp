@@ -1,4 +1,5 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
+import { createClient as createSupabaseJsClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getAppConfig } from "@/lib/config/env";
 import type { Database } from "@/types/database";
 
@@ -13,7 +14,9 @@ export function hasSupabaseConfigured(): boolean {
 }
 
 /**
- * Returns a reusable singleton Supabase client instance typed with Database schema.
+ * Returns a reusable Supabase client instance typed with Database schema.
+ * In the browser, uses createBrowserClient (@supabase/ssr) to persist session cookies.
+ * In server environments, uses standard Supabase JS client.
  * Returns null if Supabase environment variables are missing or unconfigured.
  * Never exposes or uses service-role credentials.
  */
@@ -35,12 +38,16 @@ export function getSupabaseClient(): SupabaseClient<Database> | null {
   }
 
   try {
-    supabaseInstance = createClient<Database>(url, anonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
+    if (typeof window !== "undefined") {
+      supabaseInstance = createBrowserClient<Database>(url, anonKey);
+    } else {
+      supabaseInstance = createSupabaseJsClient<Database>(url, anonKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      });
+    }
     return supabaseInstance;
   } catch (error) {
     console.error("[SupabaseClient] Failed to initialize Supabase client:", error);

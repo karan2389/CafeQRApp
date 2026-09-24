@@ -153,12 +153,132 @@ export interface Database {
           }
         ];
       };
+      admin_users: {
+        Row: {
+          id: string;
+          email: string;
+          full_name: string | null;
+          role: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          email: string;
+          full_name?: string | null;
+          role?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          full_name?: string | null;
+          role?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      table_qr_tokens: {
+        Row: {
+          table_id: string;
+          qr_token_hash: string;
+          generated_at: string;
+        };
+        Insert: {
+          table_id: string;
+          qr_token_hash: string;
+          generated_at?: string;
+        };
+        Update: {
+          table_id?: string;
+          qr_token_hash?: string;
+          generated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "table_qr_tokens_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: true;
+            referencedRelation: "tables";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      table_order_sessions: {
+        Row: {
+          id: string;
+          table_id: string;
+          status: "ACTIVE" | "CLOSED";
+          created_at: string;
+          closed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          table_id: string;
+          status?: "ACTIVE" | "CLOSED";
+          created_at?: string;
+          closed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          table_id?: string;
+          status?: "ACTIVE" | "CLOSED";
+          created_at?: string;
+          closed_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "table_order_sessions_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: false;
+            referencedRelation: "tables";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      customer_scan_sessions: {
+        Row: {
+          id: string;
+          table_order_session_id: string;
+          session_token_hash: string;
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          table_order_session_id: string;
+          session_token_hash: string;
+          created_at?: string;
+          expires_at?: string;
+        };
+        Update: {
+          id?: string;
+          table_order_session_id?: string;
+          session_token_hash?: string;
+          created_at?: string;
+          expires_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "customer_scan_sessions_table_order_session_id_fkey";
+            columns: ["table_order_session_id"];
+            isOneToOne: false;
+            referencedRelation: "table_order_sessions";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      is_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
     };
     Enums: {
       [_ in never]: never;
@@ -173,3 +293,8 @@ export type DbBranch = Database["public"]["Tables"]["branches"]["Row"];
 export type DbTable = Database["public"]["Tables"]["tables"]["Row"];
 export type DbMenuCategory = Database["public"]["Tables"]["menu_categories"]["Row"];
 export type DbMenuItem = Database["public"]["Tables"]["menu_items"]["Row"];
+export type DbAdminUser = Database["public"]["Tables"]["admin_users"]["Row"];
+export type DbTableQrToken = Database["public"]["Tables"]["table_qr_tokens"]["Row"];
+export type DbTableOrderSession = Database["public"]["Tables"]["table_order_sessions"]["Row"];
+export type DbCustomerScanSession = Database["public"]["Tables"]["customer_scan_sessions"]["Row"];
+

@@ -41,29 +41,26 @@ export function useMenu(): UseMenuReturn {
   useEffect(() => {
     let isMounted = true;
 
-    const timer = window.setTimeout(() => {
-      void fetchMenuData().then(
-        (result) => {
-          if (!isMounted) return;
-          setItems(result.items);
-          setCategories(result.categories);
-          setIsFallback(result.isFallback);
-          setError(result.error);
-          setLoading(false);
-        },
-        (err: unknown) => {
-          if (!isMounted) return;
-          const msg = err instanceof Error ? err.message : String(err);
-          setError(msg);
-          setIsFallback(true);
-          setLoading(false);
-        }
-      );
-    }, 0);
+    void fetchMenuData().then(
+      (result) => {
+        if (!isMounted) return;
+        setItems(result.items);
+        setCategories(result.categories);
+        setIsFallback(result.isFallback);
+        setError(result.error);
+        setLoading(false);
+      },
+      (err: unknown) => {
+        if (!isMounted) return;
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+        setIsFallback(true);
+        setLoading(false);
+      }
+    );
 
     return () => {
       isMounted = false;
-      window.clearTimeout(timer);
     };
   }, []);
 

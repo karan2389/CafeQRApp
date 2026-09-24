@@ -60,14 +60,14 @@ function seedOrder(
 
 export function createInitialState(): DemoState {
   return {
-    version: 1,
+    version: 2,
     tables: [
-      { id: "table-1", slug: "demo-table-1", label: "Table 1", status: "ACTIVE" },
-      { id: "table-2", slug: "demo-table-2", label: "Table 2", status: "ACTIVE" },
-      { id: "table-3", slug: "demo-table-3", label: "Table 3", status: "ACTIVE" },
-      { id: "table-4", slug: "demo-table-4", label: "Table 4", status: "ACTIVE" },
-      { id: "table-5", slug: "demo-table-5", label: "Table 5", status: "CLOSED" },
-      { id: "table-6", slug: "demo-table-6", label: "Table 6", status: "ACTIVE" },
+      { id: "table-1", slug: "table-1", label: "Table 1", status: "ACTIVE" },
+      { id: "table-2", slug: "table-2", label: "Table 2", status: "ACTIVE" },
+      { id: "table-3", slug: "table-3", label: "Table 3", status: "ACTIVE" },
+      { id: "table-4", slug: "table-4", label: "Table 4", status: "ACTIVE" },
+      { id: "table-5", slug: "table-5", label: "Table 5", status: "CLOSED" },
+      { id: "table-6", slug: "table-6", label: "Table 6", status: "ACTIVE" },
     ],
     orders: [
       seedOrder("order-2402", "table-2", "Mira", "NEW", 4, [["M001", 2], ["M004", 1]], "One coffee without sugar."),

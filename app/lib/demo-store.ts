@@ -15,7 +15,7 @@ export function readDemoState(): DemoState {
       return initial;
     }
     const parsed = JSON.parse(raw) as DemoState;
-    return parsed?.version === 1 && Array.isArray(parsed.tables) ? parsed : createInitialState();
+    return parsed?.version === 2 && Array.isArray(parsed.tables) ? parsed : createInitialState();
   } catch {
     return createInitialState();
   }

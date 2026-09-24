@@ -8,6 +8,8 @@ export interface AppConfig {
   r2?: {
     accountId?: string;
     bucketName?: string;
+    accessKeyId?: string;
+    secretAccessKey?: string;
     publicUrl?: string;
   };
 }
@@ -29,9 +31,11 @@ export function getAppConfig(): AppConfig {
       serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
     },
     r2: {
-      accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
-      bucketName: process.env.CLOUDFLARE_R2_BUCKET,
-      publicUrl: process.env.NEXT_PUBLIC_R2_PUBLIC_URL,
+      accountId: process.env.R2_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID,
+      bucketName: process.env.R2_BUCKET_NAME || process.env.CLOUDFLARE_R2_BUCKET || "cafeqr",
+      accessKeyId: process.env.R2_ACCESS_KEY_ID || process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+      publicUrl: process.env.R2_PUBLIC_URL || process.env.NEXT_PUBLIC_R2_PUBLIC_URL,
     },
   };
 }
