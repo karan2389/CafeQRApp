@@ -9,10 +9,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
 
-  // Don't render admin shell on login page
-  if (pathname === "/admin/login") {
-    return <>{children}</>;
-  }
+
 
   const navLinks = [
     { label: "Overview", href: "/admin", icon: LayoutDashboard },

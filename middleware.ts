@@ -14,8 +14,16 @@ export async function middleware(request: NextRequest) {
   const url = config.supabase?.url;
   const anonKey = config.supabase?.anonKey;
 
-  // If Supabase credentials are not configured, allow access for local dev/demo
+  // If Supabase credentials are not configured
   if (!url || !anonKey) {
+    if (config.isProduction) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+      }
+      const loginUrl = new URL("/admin/login", request.url);
+      loginUrl.searchParams.set("error", "config");
+      return NextResponse.redirect(loginUrl);
+    }
     return NextResponse.next();
   }
 
@@ -77,6 +85,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/admin",
     "/admin/:path*",
     "/api/admin/:path*",
   ],
