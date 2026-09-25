@@ -161,3 +161,21 @@ REVOKE EXECUTE ON FUNCTION public.close_table_session(UUID, UUID, TEXT, BOOLEAN)
 REVOKE EXECUTE ON FUNCTION public.close_table_session(UUID, UUID, TEXT, BOOLEAN) FROM anon;
 GRANT EXECUTE ON FUNCTION public.close_table_session(UUID, UUID, TEXT, BOOLEAN) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.close_table_session(UUID, UUID, TEXT, BOOLEAN) TO service_role;
+
+-- 5. Enable Supabase Realtime publication on table_order_sessions
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_publication 
+    WHERE pubname = 'supabase_realtime' 
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+          AND schemaname = 'public' 
+          AND tablename = 'table_order_sessions'
+      )
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.table_order_sessions;
+  END IF;
+END $$;
+

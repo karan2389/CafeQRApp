@@ -23,6 +23,7 @@
     "test:phase5-customer": "npx tsx --env-file=.env scripts/verify-phase5-customer-status.ts",
     "test:phase6-service": "npx tsx --env-file=.env scripts/verify-phase6-service-requests.ts",
     "test:phase8-closure": "npx tsx --env-file=.env scripts/verify-phase8-session-closure.ts",
+    "test:phase8-fix": "npx tsx --env-file=.env scripts/verify-phase8-fix.ts",
     "bootstrap:admin": "npx tsx --env-file=.env scripts/bootstrap-admin.ts",
     "bootstrap:staff": "npx tsx --env-file=.env scripts/bootstrap-staff.ts",
     "test:slice2": "npx tsx --env-file=.env scripts/verify-slice2.ts",

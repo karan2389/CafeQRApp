@@ -54,14 +54,14 @@ export async function GET(request: NextRequest) {
 
     if (sessionError || !scanSession) {
       return NextResponse.json(
-        { error: "Invalid or expired session" },
+        { error: "Invalid or expired session", session_status: "CLOSED", is_session_closed: true },
         { status: 403 }
       );
     }
 
     if (new Date(scanSession.expires_at) < new Date()) {
       return NextResponse.json(
-        { error: "Session expired. Please scan table QR again." },
+        { error: "Session expired. Please scan table QR again.", session_status: "CLOSED", is_session_closed: true },
         { status: 403 }
       );
     }
@@ -131,13 +131,32 @@ export async function GET(request: NextRequest) {
       }));
     }
 
+    // Safely extract status whether table_order_sessions is object or array from join
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sessionStatus = (scanSession?.table_order_sessions as any)?.status || "ACTIVE";
+    const rawTos = (scanSession as any)?.table_order_sessions;
+    const tos = Array.isArray(rawTos) ? rawTos[0] : rawTos;
+    let sessionStatus = tos?.status;
+
+    // Resilient fallback: If join didn't populate status, query table_order_sessions directly
+    if (!sessionStatus && scanSession?.table_order_session_id) {
+      const { data: directTos } = await adminClient
+        .from("table_order_sessions")
+        .select("status")
+        .eq("id", scanSession.table_order_session_id)
+        .maybeSingle();
+      if (directTos?.status) {
+        sessionStatus = directTos.status;
+      }
+    }
+
+    sessionStatus = sessionStatus || "ACTIVE";
+    const isClosed = sessionStatus === "CLOSED";
 
     return NextResponse.json({
       orders: orders || [],
+      session_id: scanSession.table_order_session_id,
       session_status: sessionStatus,
-      is_session_closed: sessionStatus === "CLOSED",
+      is_session_closed: isClosed,
     });
   } catch (err: unknown) {
     console.error("[OrdersAPI:GET] Exception:", err);
@@ -239,20 +258,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Safely extract status whether table_order_sessions is object or array from join
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const orderSession = scanSession.table_order_sessions as any;
-    if (orderSession.status !== "ACTIVE") {
+    const rawOrderSession = (scanSession as any)?.table_order_sessions;
+    const orderSession = Array.isArray(rawOrderSession) ? rawOrderSession[0] : rawOrderSession;
+    let orderSessionStatus = orderSession?.status;
+
+    if (!orderSessionStatus && scanSession?.table_order_session_id) {
+      const { data: directTos } = await adminClient
+        .from("table_order_sessions")
+        .select("status")
+        .eq("id", scanSession.table_order_session_id)
+        .maybeSingle();
+      if (directTos?.status) {
+        orderSessionStatus = directTos.status;
+      }
+    }
+
+    if (orderSessionStatus !== "ACTIVE") {
       return NextResponse.json(
         {
           error: "SESSION_CLOSED",
-          message: "This table session has ended. Please scan the table QR code again to start a new session.",
+          message: "Session closed. Please scan the table QR code again.",
         },
         { status: 403 }
       );
     }
 
-    const table = orderSession.tables;
-    if (!table.is_active) {
+    const table = Array.isArray(orderSession?.tables) ? orderSession.tables[0] : orderSession?.tables;
+    if (table && !table.is_active) {
       return NextResponse.json(
         { error: "This table is currently inactive." },
         { status: 403 }

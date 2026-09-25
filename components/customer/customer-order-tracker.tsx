@@ -80,13 +80,19 @@ export function CustomerOrderTracker({
 
         {/* Polling & Refresh indicators */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 rounded-full border border-[#d6e5d8] bg-[#f1f8f3] px-3 py-1 text-xs font-medium text-[#2d6639]">
+          <div className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
+            isSessionClosed
+              ? "border-amber-300 bg-amber-50 text-amber-800"
+              : "border-[#d6e5d8] bg-[#f1f8f3] text-[#2d6639]"
+          }`}>
             <span
               className={`inline-block h-2 w-2 rounded-full ${
-                isPolling ? "bg-[#e07e32] animate-ping" : "bg-[#3ca856] animate-pulse"
+                isSessionClosed
+                  ? "bg-amber-500"
+                  : isPolling ? "bg-[#e07e32] animate-ping" : "bg-[#3ca856] animate-pulse"
               }`}
             />
-            <span>{isPolling ? "Checking…" : "Live updates active"}</span>
+            <span>{isSessionClosed ? "Session closed" : isPolling ? "Checking…" : "Live updates active"}</span>
           </div>
 
           {onRefresh && (
@@ -124,7 +130,7 @@ export function CustomerOrderTracker({
         <div className="mt-5 flex items-start gap-3.5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950 shadow-sm animate-in fade-in">
           <CheckCircle2 size={20} className="flex-none text-amber-600 mt-0.5" />
           <div>
-            <p className="font-bold text-sm text-amber-900">Table Session Ended</p>
+            <p className="font-bold text-sm text-amber-900">Session closed. Please scan the table QR code again.</p>
             <p className="mt-1 leading-relaxed text-amber-800">
               The bill for this table session was settled with cafe staff. The orders below represent your finalized receipt. To start a fresh order session, please scan the QR code at your table again.
             </p>

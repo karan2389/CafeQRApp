@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, ShoppingBag, Sparkles } from "lucide-react";
+import { AlertCircle, ChevronRight, ShoppingBag, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useMenu } from "@/features/menu";
@@ -10,6 +10,7 @@ import { formatINR } from "@/lib/format";
 import { PUFFS_CONFIRMED_STORAGE_KEY, LIMITS } from "@/lib/constants";
 import { useDemoState } from "@/app/lib/use-demo-state";
 import { readDemoState } from "@/app/lib/demo-store";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { useCart } from "@/features/ordering/use-cart";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { ProductCard } from "@/components/customer/product-card";
@@ -39,6 +40,8 @@ export function CustomerPageClient() {
   const pollServiceRequestsRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const submissionKey = useRef<string | null>(null);
+  const currentSessionIdRef = useRef<string | null>(null);
+  const [sessionOrders, setSessionOrders] = useState<DemoOrder[] | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -54,13 +57,15 @@ export function CustomerPageClient() {
   }, []);
 
   const table = state?.tables.find((entry) => entry.slug === slug);
-  const tableOrders = useMemo(
+  const fallbackOrders = useMemo(
     () =>
       state?.orders
         .filter((order) => order.tableId === table?.id)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt)) ?? [],
     [state, table?.id]
   );
+  // Use session-specific orders from API, falling back to local demo state if API is unconfigured
+  const tableOrders = sessionOrders !== null ? sessionOrders : fallbackOrders;
 
   const [isSessionClosed, setIsSessionClosed] = useState(false);
   const isClosed = table?.status === "CLOSED" || isSessionClosed;
@@ -162,12 +167,24 @@ export function CustomerPageClient() {
 
         const data = (await res.json()) as {
           orders?: ApiOrder[];
+          session_id?: string;
           session_status?: string;
           is_session_closed?: boolean;
         };
 
-        if (data.is_session_closed) {
-          setIsSessionClosed(true);
+        const isClosedNow = Boolean(data.is_session_closed || data.session_status === "CLOSED");
+        setIsSessionClosed(isClosedNow);
+
+        if (isClosedNow) {
+          clearCart();
+        }
+
+        // If a new session ID is detected (customer scanned QR for a new session)
+        if (data.session_id && currentSessionIdRef.current && currentSessionIdRef.current !== data.session_id) {
+          clearCart();
+        }
+        if (data.session_id) {
+          currentSessionIdRef.current = data.session_id;
         }
 
         if (!isMounted || !data.orders || !Array.isArray(data.orders)) {
@@ -176,9 +193,6 @@ export function CustomerPageClient() {
 
         const currentTable = tableRef.current;
         if (!currentTable) return;
-
-        const currentState = readDemoState();
-        const currentOrders = currentState.orders || [];
 
         const incomingDbOrders: DemoOrder[] = data.orders.map((o) => {
           let mappedStatus: OrderStatus = "NEW";
@@ -213,42 +227,8 @@ export function CustomerPageClient() {
           };
         });
 
-        let hasChanges = false;
-        const orderMap = new Map(currentOrders.map((o) => [o.id, o]));
-
-        for (const inc of incomingDbOrders) {
-          const existing = orderMap.get(inc.id);
-          if (!existing) {
-            hasChanges = true;
-            orderMap.set(inc.id, inc);
-          } else if (
-            existing.status !== inc.status ||
-            existing.cancellationReason !== inc.cancellationReason ||
-            existing.total !== inc.total
-          ) {
-            hasChanges = true;
-            orderMap.set(inc.id, {
-              ...existing,
-              status: inc.status,
-              cancellationReason: inc.cancellationReason,
-              total: inc.total,
-              subtotal: inc.subtotal,
-              updatedAt: inc.updatedAt,
-            });
-          }
-        }
-
-        // Only commit if there are genuine additions or status modifications
-        if (hasChanges && isMounted) {
-          const updatedOrders = Array.from(orderMap.values());
-          commitRef.current(
-            (curr) => ({
-              ...curr,
-              orders: updatedOrders,
-            }),
-            { type: "DEMO_RESET" }
-          );
-        }
+        // Set session-scoped orders directly for live rendering
+        setSessionOrders(incomingDbOrders);
 
         if (isMounted) {
           setLastUpdated(new Date());
@@ -312,10 +292,45 @@ export function CustomerPageClient() {
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
+    // 4. Supabase Realtime listener on table_order_sessions and orders for instant updates
+    const supabase = getSupabaseClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let channel: any = null;
+    if (supabase) {
+      channel = supabase
+        .channel(`customer-table-session-${slug}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "table_order_sessions",
+          },
+          () => {
+            void pollOrders();
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "orders",
+          },
+          () => {
+            void pollOrders();
+          }
+        )
+        .subscribe();
+    }
+
     return () => {
       isMounted = false;
       abortController.abort();
       if (timerId) clearInterval(timerId);
+      if (channel && supabase) {
+        supabase.removeChannel(channel);
+      }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [slug]);
@@ -363,7 +378,8 @@ export function CustomerPageClient() {
       if (!response.ok) {
         if (result.error === "SESSION_CLOSED") {
           setIsSessionClosed(true);
-          toast.error("This table session has ended. Please scan the table QR code again.");
+          clearCart();
+          toast.error("Session closed. Please scan the table QR code again.");
         } else {
           toast.error(result.error || "Failed to submit order. Please try again.");
         }
@@ -451,8 +467,15 @@ export function CustomerPageClient() {
       />
 
       {isClosed && (
-        <div className="border-b border-[#edc9bc] bg-[#fff1eb] px-4 py-4 text-center text-sm font-semibold text-[#8f3f28]">
-          Ordering is closed for {table.label}. Please contact a staff member.
+        <div className="border-b border-[#e6be98] bg-[#fbf5ed] px-4 py-4 text-center text-sm font-semibold text-[#663b18] shadow-sm">
+          <div className="mx-auto flex max-w-xl items-center justify-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f0dfc8] text-[#8c4613]">
+              <AlertCircle size={15} />
+            </span>
+            <span className="text-base font-bold">
+              Session closed. Please scan the table QR code again.
+            </span>
+          </div>
         </div>
       )}
 
@@ -539,7 +562,7 @@ export function CustomerPageClient() {
             onRefresh={handleManualRefresh}
           />
 
-          <RunningBill orders={tableOrders} />
+          <RunningBill orders={tableOrders} isSessionClosed={isClosed} />
         </div>
 
         <aside className="hidden lg:block">
@@ -570,9 +593,9 @@ export function CustomerPageClient() {
                 <Button
                   onClick={() => setReviewOpen(true)}
                   disabled={isClosed}
-                  className="h-12 w-full rounded-xl bg-[#4a211a] text-white hover:bg-[#351712]"
+                  className="h-12 w-full rounded-xl bg-[#4a211a] text-white hover:bg-[#351712] disabled:opacity-50"
                 >
-                  Place order
+                  {isClosed ? "Session closed" : "Place order"}
                 </Button>
               </div>
             ) : (
@@ -595,7 +618,7 @@ export function CustomerPageClient() {
               <span className="grid h-8 min-w-8 place-items-center rounded-full bg-white/15 px-2 text-sm font-bold">
                 {cartQuantity}
               </span>
-              <span className="font-bold">Review order</span>
+              <span className="font-bold">{isClosed ? "Session closed" : "Review order"}</span>
             </span>
             <span className="font-extrabold">{formatINR(cartTotal)}</span>
           </button>
