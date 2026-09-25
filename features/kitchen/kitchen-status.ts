@@ -14,12 +14,13 @@ export const kitchenOrderStatusMeta: Record<OrderStatus, { label: string; style:
   NEW: { label: "New", style: "bg-[#fff0dc] text-[#a84d18]" },
   PREPARING: { label: "Preparing", style: "bg-[#e6eef9] text-[#34598a]" },
   DELIVERED: { label: "Delivered", style: "bg-[#e3f0e7] text-[#346548]" },
+  CANCELLED: { label: "Cancelled", style: "bg-[#fdeeed] text-[#b83826]" },
 };
 
 export function computeVisualState(table: DemoTable, orders: DemoOrder[]): VisualState {
   if (table.status === "CLOSED") return "INACTIVE";
   if (orders.some((order) => order.status === "NEW")) return "NEW";
   if (orders.some((order) => order.status === "PREPARING")) return "PREPARING";
-  if (orders.length && orders.every((order) => order.status === "DELIVERED")) return "DELIVERED";
+  if (orders.length && orders.every((order) => order.status === "DELIVERED" || order.status === "CANCELLED")) return "DELIVERED";
   return "ACTIVE";
 }

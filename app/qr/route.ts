@@ -77,10 +77,19 @@ async function handleQR(request: NextRequest) {
     // Set HTTP-only secure cookies
     // For GET requests we redirect, for POST we can return JSON
     if (request.method === "POST") {
-      const response = NextResponse.json({ success: true, table_slug });
+      const response = NextResponse.json({ success: true, table_slug, table_order_session_id });
       response.cookies.set({
         name: "cafe_customer_session",
         value: customerToken,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 12,
+      });
+      response.cookies.set({
+        name: "cafe_table_session_id",
+        value: table_order_session_id,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",

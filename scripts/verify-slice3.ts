@@ -70,7 +70,6 @@ async function verifySlice3() {
       throw new Error("RPC returned no session data");
     }
     
-    // @ts-expect-error dynamic result
     const sessionList = sessionData as Array<unknown>;
     console.log("   Valid scan returned session data:");
     console.log(sessionList[0]);

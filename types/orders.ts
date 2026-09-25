@@ -1,6 +1,6 @@
 import type { MenuSection } from "./menu";
 
-export type OrderStatus = "NEW" | "PREPARING" | "DELIVERED";
+export type OrderStatus = "NEW" | "PREPARING" | "DELIVERED" | "CANCELLED";
 
 export interface OrderLine {
   menuItemId: string;
@@ -26,6 +26,7 @@ export interface DemoOrder {
   subtotal: number; // Subtotal in Indian Rupees (₹)
   total: number; // Total in Indian Rupees (₹)
   status: OrderStatus;
+  cancellationReason?: string | null;
   createdAt: string;
   updatedAt: string;
   /** @deprecated Legacy field preserved for backwards compatibility */
