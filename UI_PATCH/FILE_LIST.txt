@@ -1,0 +1,14 @@
+app/table/[slug]/layout.tsx
+app/table/[slug]/loading.tsx
+app/table/[slug]/customer.css
+components/customer/customer-intro.tsx
+components/customer/customer-page-client.tsx
+components/customer/customer-header.tsx
+components/customer/product-card.tsx
+components/customer/customer-order-tracker.tsx
+components/customer/running-bill.tsx
+components/customer/age-gate-dialog.tsx
+components/customer/order-review-dialog.tsx
+components/customer/service-request-dialog.tsx
+public/courista/hero.png
+public/courista/favicon.svg

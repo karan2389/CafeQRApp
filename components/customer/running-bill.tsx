@@ -15,7 +15,7 @@ export function RunningBill({ orders, isSessionClosed = false }: RunningBillProp
   const total = activeOrders.reduce((sum, order) => sum + (order.total ?? ((order.totalPaise ?? 0) / 100)), 0);
 
   return (
-    <section className={`mt-12 rounded-[1.7rem] p-5 text-white sm:p-7 transition-all ${
+    <section className={`courista-bill mt-12 rounded-[1.7rem] p-5 text-white sm:p-7 transition-all ${
       isSessionClosed ? "bg-[#221a16] border border-[#544137]" : "bg-[#2b211c]"
     }`}>
       {isSessionClosed && (

@@ -16,7 +16,7 @@ export interface AgeGateDialogProps {
 export function AgeGateDialog({ open, onOpenChange, onConfirm }: AgeGateDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100%-2rem)] max-w-md rounded-[1.6rem] border-[#d9ccbc] bg-[#fffdf8] p-6">
+      <DialogContent className="courista-dialog w-[calc(100%-2rem)] max-w-md rounded-[1.6rem] border-[#d9ccbc] bg-[#fffdf8] p-6">
         <DialogHeader>
           <DialogTitle className="font-display text-3xl">Before you continue</DialogTitle>
           <DialogDescription className="pt-2 text-base leading-7 text-[var(--muted-ink)]">
@@ -24,7 +24,7 @@ export function AgeGateDialog({ open, onOpenChange, onConfirm }: AgeGateDialogPr
           </DialogDescription>
         </DialogHeader>
         <div className="mt-4 grid gap-3">
-          <Button onClick={onConfirm} className="h-12 rounded-xl bg-[#4a211a]">
+          <Button onClick={onConfirm} className="h-12 rounded-xl bg-[#9c3215] text-white">
             I am 18 or older
           </Button>
           <Button

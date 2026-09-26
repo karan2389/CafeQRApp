@@ -1,0 +1,83 @@
+@import url("https://fonts.googleapis.com/css2?family=Allerta&display=swap");
+/* Customer route only. Admin and staff retain their existing design. */
+.courista { --c-paper:#fbf8f2; --c-rust:#9c3215; --c-rust-dark:#72240f; --c-ink:#231a17; --c-muted:#756b64; --c-line:#eadfd1; --c-cream:#f4ece2; min-height:100dvh; background:var(--c-paper); color:var(--c-ink); font-family:Allerta,Inter,ui-sans-serif,system-ui,sans-serif; }
+.courista button,.courista a { -webkit-tap-highlight-color:transparent; }
+.courista button:focus-visible,.courista a:focus-visible,.courista-dialog button:focus-visible,.courista-dialog input:focus-visible,.courista-dialog textarea:focus-visible { outline:3px solid #194ca0; outline-offset:3px; }
+.courista button:disabled { cursor:not-allowed; opacity:.55; }
+.courista-page { min-height:100dvh; padding-bottom:calc(108px + env(safe-area-inset-bottom)); }
+.courista-header { position:sticky; z-index:35; top:0; background:rgba(251,248,242,.96); border-bottom:1px solid var(--c-line); backdrop-filter:blur(14px); }
+.courista-header-inner { max-width:1260px; min-height:76px; margin:auto; padding:8px clamp(14px,4vw,32px); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.courista-brand { display:inline-flex; flex-direction:column; align-items:center; text-decoration:none; color:var(--c-rust-dark); line-height:1; flex-shrink:0; }
+.courista-brand-name { font:normal clamp(2rem,8vw,3.1rem)/.9 Georgia,'Times New Roman',serif; letter-spacing:-.055em; }
+.courista-brand-tag { margin-top:6px; font:700 clamp(.46rem,1.8vw,.62rem)/1.2 Allerta,Inter,sans-serif; letter-spacing:.28em; white-space:nowrap; }
+.courista-header-actions { display:flex; align-items:center; gap:7px; }
+.courista-table-badge { display:inline-flex; align-items:center; gap:7px; white-space:nowrap; min-height:44px; padding:0 12px; border-radius:999px; background:var(--c-cream); color:var(--c-rust-dark); font-weight:750; font-size:clamp(.78rem,3.3vw,.96rem); }
+.courista-table-badge span { font-size:1.25rem; line-height:1; }
+.courista-header-help { position:relative; display:grid; place-items:center; width:44px; height:44px; border:1px solid var(--c-line); border-radius:50%; background:#fffaf4; color:var(--c-rust-dark); }
+.courista-header-help.is-active { background:#fff1dd; }
+.courista-help-dot { position:absolute; right:6px; top:5px; width:9px; height:9px; background:#30764c; border:2px solid #fff; border-radius:50%; }
+.courista-layout { display:grid; grid-template-columns:minmax(0,1fr); gap:24px; max-width:1260px; margin:auto; padding:0 clamp(12px,3vw,32px) 48px; }
+.courista-main-column { min-width:0; }
+.courista-hero { position:relative; overflow:hidden; min-height:clamp(165px,35vw,320px); margin:0 calc(-1 * clamp(12px,3vw,32px)); background:#9a3919; }
+.courista-hero-image { object-fit:cover; object-position:center 44%; }
+.courista-hero::after { content:''; position:absolute; inset:0; background:linear-gradient(0deg,rgba(64,23,8,.72),transparent 53%); }
+.courista-hero-copy { position:absolute; z-index:1; bottom:clamp(16px,4vw,34px); left:clamp(18px,5vw,46px); max-width:70%; color:#fffaf2; font-size:clamp(1.15rem,3.3vw,2.45rem); font-weight:800; line-height:1.13; text-shadow:0 1px 4px #49190c; }
+.courista-orders-shortcut { display:flex; justify-content:space-between; align-items:center; min-height:48px; margin-top:16px; padding:0 15px; border-radius:12px; background:#fff5e8; color:var(--c-rust-dark); font-weight:750; text-decoration:none; }
+.courista-categories { position:sticky; top:76px; z-index:20; display:flex; gap:8px; overflow-x:auto; overscroll-behavior-inline:contain; scrollbar-width:none; margin:0 calc(-1 * clamp(12px,3vw,32px)); padding:14px clamp(12px,3vw,32px); background:rgba(251,248,242,.97); }
+.courista-categories::-webkit-scrollbar { display:none; }
+.courista-categories button { flex:none; min-height:44px; border:1px solid transparent; border-radius:999px; padding:0 17px; background:var(--c-cream); color:var(--c-rust-dark); font-size:.87rem; font-weight:750; white-space:nowrap; transition:background .18s,transform .18s; }
+.courista-categories button:active,.courista-add:active,.courista-cart-bar button:active { transform:scale(.98); }
+.courista-categories button.is-selected { background:var(--c-rust); color:#fff; }
+.courista-menu { scroll-margin-top:150px; }
+.courista-menu h1 { margin:14px 0 16px; color:var(--c-rust-dark); font-size:clamp(1.65rem,4.5vw,2.5rem); font-weight:800; line-height:1.18; }
+.courista-menu-note { color:var(--c-muted); font-size:.9rem; margin:-6px 0 16px; }
+.courista-product-list { display:grid; gap:10px; }
+.courista-product { display:grid; grid-template-columns:clamp(82px,23vw,116px) minmax(0,1fr) auto; align-items:center; min-height:106px; gap:clamp(8px,2.4vw,18px); padding:7px; border:1px solid var(--c-line); border-radius:17px; background:#fffdf9; box-shadow:0 4px 18px rgba(75,41,23,.035); }
+.courista-product.is-unavailable { opacity:.6; }
+.courista-product-photo { position:relative; width:100%; aspect-ratio:1; border-radius:12px; overflow:hidden; background:#ede2d5; }
+.courista-product-info { min-width:0; align-self:center; }
+.courista-product-info h3 { margin:0; font-size:clamp(.92rem,3.7vw,1.17rem); line-height:1.2; font-weight:800; overflow-wrap:anywhere; }
+.courista-product-info strong { display:block; margin-top:5px; color:var(--c-rust); font-size:clamp(.9rem,3.7vw,1.08rem); }
+.courista-product-description { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; margin:4px 0 0; font-size:.75rem; line-height:1.35; color:var(--c-muted); }
+.courista-unavailable { display:block; font-size:.72rem; font-weight:700; color:#684f46; }
+.courista-add { display:flex; gap:5px; align-items:center; justify-content:center; min-width:76px; min-height:48px; padding:0 10px; border:0; border-radius:13px; background:var(--c-rust); color:#fff; font-size:.91rem; font-weight:800; }
+.courista-stepper { display:flex; align-items:center; border:1px solid #e2c4ad; background:#fff6eb; border-radius:13px; color:var(--c-rust-dark); font-weight:800; }
+.courista-stepper button { display:grid; place-items:center; width:40px; height:48px; border:0; background:transparent; color:inherit; }
+.courista-stepper span { min-width:18px; text-align:center; }
+.courista-service-link { display:flex; align-items:center; gap:12px; width:100%; min-height:60px; margin:18px 0 0; padding:0 17px; border:0; border-radius:15px; background:var(--c-cream); color:var(--c-rust-dark); text-align:left; font-weight:750; }
+.courista-service-link span { flex:1; }
+.courista-orders-area { scroll-margin-top:156px; }
+.courista-orders-area > section { border-radius:20px; }
+.courista-orders-area > section:first-child { margin-top:28px; }
+.courista-closed-banner { display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; background:#fff1dc; color:#713411; font-weight:700; text-align:center; }
+.courista-desktop-cart { display:none; }
+.courista-cart-bar { position:fixed; z-index:40; bottom:0; left:0; right:0; padding:9px 12px calc(9px + env(safe-area-inset-bottom)); background:rgba(251,248,242,.97); border-top:1px solid var(--c-line); backdrop-filter:blur(14px); }
+.courista-cart-bar button { display:flex; align-items:center; gap:12px; width:100%; max-width:600px; min-height:58px; margin:auto; padding:7px 16px; border:0; border-radius:16px; background:var(--c-rust); color:#fff; text-align:left; }
+.courista-cart-bar button > span { flex:1; display:flex; flex-direction:column; line-height:1.23; }
+.courista-cart-bar button strong { font-size:1rem; }
+.courista-cart-bar button small { margin-top:3px; font-size:.8rem; }
+.courista-error { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100dvh; padding:24px; text-align:center; }
+.courista-error h1 { font:2rem Georgia,serif; color:var(--c-rust-dark); }
+.courista-intro { display:grid; place-items:center; min-height:100dvh; background:#fbf8f2; color:#922f14; overflow:hidden; }
+.courista-intro-mark { position:relative; display:flex; align-items:baseline; justify-content:center; width:min(84vw,430px); font-family:Georgia,'Times New Roman',serif; font-size:clamp(4rem,17vw,7rem); white-space:nowrap; letter-spacing:-.055em; }
+.courista-intro-c { transform-origin:center; animation:courista-c-enter .35s both,courista-c-shift .55s .32s both; }
+.courista-intro-rest { overflow:hidden; max-width:0; opacity:0; animation:courista-rest .53s .34s forwards; }
+.courista-intro-tag { position:absolute; top:calc(50% + clamp(2.2rem,7vw,4rem)); left:0; width:100%; text-align:center; opacity:0; font:700 clamp(.55rem,2.2vw,.82rem) Allerta,Inter,sans-serif; letter-spacing:.23em; animation:courista-tag .25s .82s forwards; }
+@keyframes courista-c-enter { from { opacity:0; transform:scale(.82); } to { opacity:1; transform:scale(1); } }
+@keyframes courista-c-shift { from { translate:35% 0; } to { translate:0 0; } }
+@keyframes courista-rest { from { max-width:0; opacity:0; } to { max-width:7em; opacity:1; } }
+@keyframes courista-tag { to { opacity:1; } }
+@media (max-width:390px) { .courista-header-inner { min-height:68px; } .courista-brand-name { font-size:2rem; } .courista-brand-tag { letter-spacing:.18em; } .courista-table-badge { padding:0 9px; } .courista-categories { top:68px; } .courista-product-description { display:none; } .courista-add { min-width:48px; } .courista-add span { display:none; } .courista-product { grid-template-columns:78px minmax(0,1fr) auto; } }
+@media (max-width:340px) { .courista-header-help { width:40px; height:40px; } .courista-table-badge { font-size:.73rem; } .courista-brand-name { font-size:1.75rem; } .courista-product { gap:6px; } .courista-stepper button { width:32px; } }
+@media (min-width:768px) { .courista-layout { grid-template-columns:minmax(0,1fr) 300px; gap:28px; padding-top:20px; } .courista-hero { margin:0; border-radius:20px; } .courista-categories { margin:0; padding-left:0; padding-right:0; top:76px; } .courista-desktop-cart { display:block; } .courista-desktop-cart-inner { position:sticky; top:104px; border:1px solid var(--c-line); border-radius:20px; padding:18px; background:#fffdf9; } .courista-desktop-cart h2 { display:flex; align-items:center; gap:9px; margin:0 0 20px; font-size:1.1rem; } .courista-desktop-cart small { margin-left:auto; color:var(--c-muted); font-size:.73rem; white-space:nowrap; } .courista-desktop-cart p { color:var(--c-muted); font-size:.86rem; } .courista-cart-total { display:flex; justify-content:space-between; gap:12px; padding:18px 0; margin-top:15px; border-top:1px solid var(--c-line); font-weight:700; } .courista-cart-submit { width:100%; min-height:48px; background:var(--c-rust); color:#fff; } .courista-cart-bar { display:none; } .courista-page { padding-bottom:24px; } }
+@media (min-width:1024px) { .courista-layout { grid-template-columns:minmax(0,1fr) 350px; gap:34px; } .courista-product-list { grid-template-columns:repeat(2,minmax(0,1fr)); } .courista-product { grid-template-columns:98px minmax(0,1fr); grid-template-rows:auto auto; } .courista-product-photo { grid-row:span 2; } .courista-product-controls { justify-self:start; } .courista-product-info h3 { font-size:1rem; } }
+@media (prefers-reduced-motion:reduce) { .courista-intro-c,.courista-intro-rest,.courista-intro-tag { animation:none!important; translate:0!important; opacity:1!important; max-width:none!important; } .courista-product,.courista-categories button { transition:none!important; } }
+/* Portalled customer dialogs carry a unique class so global Admin UI is unaffected. */
+.courista-dialog { max-height:min(92dvh,760px); overflow-y:auto; overscroll-behavior:contain; padding-bottom:max(18px,env(safe-area-inset-bottom)); border-color:#eadfd1!important; background:#fffdf9!important; color:#231a17; font-family:Allerta,Inter,ui-sans-serif,system-ui,sans-serif; }
+.courista-dialog .font-display { font-family:Georgia,'Times New Roman',serif; color:#72240f; }
+.courista-dialog input,.courista-dialog textarea { font-size:16px; }
+.courista-tracker { border-color:#eadfd1!important; background:#fffdf9!important; }
+.courista-tracker h2 { color:#72240f; }
+.courista-tracker .relative.flex.items-center.justify-between { min-width:0; }
+.courista-bill { background:#2b211c; }
+@media(max-width:390px) { .courista-dialog { width:calc(100% - 16px)!important; padding-left:14px!important; padding-right:14px!important; } .courista-tracker { padding:14px!important; } .courista-tracker .relative.z-10 { max-width:32%; } .courista-tracker .relative.z-10 span:last-child { font-size:10px; line-height:1.2; } .courista-tracker article .flex.items-center.gap-2 { flex-wrap:wrap; } }

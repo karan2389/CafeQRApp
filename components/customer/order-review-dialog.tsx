@@ -49,7 +49,7 @@ export function OrderReviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !submitting && onOpenChange(next)}>
-      <DialogContent className="max-h-[92vh] w-[calc(100%-1.5rem)] max-w-lg overflow-y-auto rounded-[1.6rem] border-[#d9ccbc] bg-[#fffdf8] p-0">
+      <DialogContent className="courista-dialog max-h-[92dvh] w-[calc(100%-1.5rem)] max-w-lg overflow-y-auto rounded-[1.6rem] border-[#d9ccbc] bg-[#fffdf8] p-0">
         <div className="border-b border-[#e2d8ca] px-5 py-5 sm:px-6">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-3 text-3xl">
@@ -114,7 +114,7 @@ export function OrderReviewDialog({
             <Button
               disabled={submitting || !isNameValid || isClosed}
               onClick={onConfirmOrder}
-              className="h-12 rounded-xl bg-[#4a211a]"
+              className="h-12 rounded-xl bg-[#9c3215] text-white"
             >
               {submitting ? "Sending…" : "Confirm order"}
             </Button>

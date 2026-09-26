@@ -187,7 +187,7 @@ export function ServiceRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg rounded-[1.8rem] bg-[#fffdf9] p-5 sm:p-6 text-[#2d211a]">
+      <DialogContent className="courista-dialog max-w-lg rounded-[1.8rem] bg-[#fffdf9] p-5 sm:p-6 text-[#2d211a]">
         <DialogHeader className="border-b border-[#ece3d6] pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -238,7 +238,7 @@ export function ServiceRequestDialog({
                   <button
                     onClick={() => handleCancel(req.id)}
                     disabled={cancellingId === req.id}
-                    className="flex items-center gap-1 rounded-lg border border-[#e5dcd1] bg-white px-2.5 py-1 text-xs font-semibold text-[#8c3e16] hover:bg-[#faf4ed] disabled:opacity-50"
+                    className="flex min-h-11 items-center gap-1 rounded-lg border border-[#e5dcd1] bg-white px-2.5 py-1 text-xs font-semibold text-[#8c3e16] hover:bg-[#faf4ed] disabled:opacity-50"
                   >
                     {cancellingId === req.id ? (
                       <Loader2 size={12} className="animate-spin" />
@@ -269,7 +269,7 @@ export function ServiceRequestDialog({
                   key={opt.type}
                   type="button"
                   onClick={() => setSelectedType(opt.type)}
-                  className={`flex flex-col text-left p-3 rounded-2xl border transition-all ${
+                  className={`flex min-h-[94px] flex-col text-left p-3 rounded-2xl border transition-all ${
                     isSelected
                       ? "border-[#8c3e16] bg-[#fbf2e9] ring-2 ring-[#f4e0cf]"
                       : "border-[#e5dcd0] bg-white hover:bg-[#faf6f0]"
@@ -314,7 +314,7 @@ export function ServiceRequestDialog({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             disabled={submitting || isClosed}
-            className="w-full rounded-xl border border-[#dcd1c3] bg-white px-3.5 py-2.5 text-sm text-[#2d211a] placeholder:text-[#a89b90] focus:border-[#8c3e16] focus:outline-none focus:ring-2 focus:ring-[#f4e0cf]"
+            className="w-full min-h-12 rounded-xl border border-[#dcd1c3] bg-white px-3.5 py-2.5 text-base text-[#2d211a] placeholder:text-[#a89b90] focus:border-[#8c3e16] focus:outline-none focus:ring-2 focus:ring-[#f4e0cf]"
           />
         </div>
 
@@ -340,7 +340,7 @@ export function ServiceRequestDialog({
           <Button
             onClick={handleSubmit}
             disabled={isClosed || submitting || isTypeActive}
-            className="rounded-xl bg-[#4a211a] text-white hover:bg-[#351712] disabled:opacity-50 px-5"
+            className="min-h-12 rounded-xl bg-[#9c3215] text-white hover:bg-[#72240f] disabled:opacity-50 px-5"
           >
             {submitting ? (
               <span className="flex items-center gap-2">

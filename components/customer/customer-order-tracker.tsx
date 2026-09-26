@@ -61,7 +61,7 @@ export function CustomerOrderTracker({
   }
 
   return (
-    <section className="mt-10 rounded-[1.8rem] border border-[#dcd2c4] bg-[#fffdf9] p-5 shadow-[0_12px_40px_rgba(50,30,15,0.06)] sm:p-7">
+    <section className="courista-tracker mt-10 rounded-[1.8rem] border border-[#dcd2c4] bg-[#fffdf9] p-5 shadow-[0_12px_40px_rgba(50,30,15,0.06)] sm:p-7">
       {/* Header bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#ece3d6] pb-5">
         <div>
@@ -100,7 +100,7 @@ export function CustomerOrderTracker({
               onClick={onRefresh}
               disabled={isLoading}
               title="Check for status updates"
-              className="flex h-8 items-center gap-1.5 rounded-full border border-[#dcd2c4] bg-white px-3 text-xs font-semibold text-[#5a483e] shadow-sm transition hover:bg-[#faf6f0] active:scale-95 disabled:opacity-50"
+              className="flex min-h-11 items-center gap-1.5 rounded-full border border-[#dcd2c4] bg-white px-3 text-xs font-semibold text-[#5a483e] shadow-sm transition hover:bg-[#faf6f0] active:scale-95 disabled:opacity-50"
             >
               <RefreshCw size={13} className={isLoading ? "animate-spin text-[#8c3e16]" : ""} />
               <span className="hidden sm:inline">Refresh</span>
@@ -195,7 +195,7 @@ export function CustomerOrderTracker({
                   <button
                     onClick={() => toggleExpand(order.id)}
                     aria-label={isExpanded ? "Collapse details" : "Expand details"}
-                    className="grid h-8 w-8 place-items-center rounded-lg border border-[#e0d6c8] bg-white text-[#6b5a4f] hover:bg-[#fcf8f2]"
+                    className="grid h-11 w-11 place-items-center rounded-lg border border-[#e0d6c8] bg-white text-[#6b5a4f] hover:bg-[#fcf8f2]"
                   >
                     {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
