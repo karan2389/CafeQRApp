@@ -21,6 +21,7 @@ import { OrderReviewDialog } from "@/components/customer/order-review-dialog";
 import { CustomerOrderTracker } from "@/components/customer/customer-order-tracker";
 import { ServiceRequestDialog } from "@/components/customer/service-request-dialog";
 import { CustomerIntro } from "@/components/customer/customer-intro";
+import { CustomerFooter } from "@/components/customer/customer-footer";
 import type { DemoOrder, OrderStatus, ServiceRequest } from "@/types";
 
 export function CustomerPageClient() {
@@ -30,7 +31,7 @@ export function CustomerPageClient() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [introDone, setIntroDone] = useState(false);
   useEffect(() => {
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timer = window.setTimeout(() => setIntroDone(true), reducedMotion ? 0 : 1100);
     return () => window.clearTimeout(timer);
   }, []);
@@ -513,6 +514,7 @@ export function CustomerPageClient() {
           </div>
         </aside>
       </div>
+      <CustomerFooter />
       {cartQuantity > 0 && <div className="courista-cart-bar">
         <button type="button" onClick={() => setReviewOpen(true)} disabled={isClosed} aria-label={`Review order: ${cartQuantity} items, ${formatINR(cartTotal)}`}>
           <ShoppingBag size={22} /><span><strong>{isClosed ? "Session closed" : "View cart"}</strong><small>{cartQuantity} {cartQuantity === 1 ? "item" : "items"} · {formatINR(cartTotal)}</small></span><ChevronRight size={22} />
