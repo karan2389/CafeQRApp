@@ -16,7 +16,7 @@ export default async function ProtectedStaffLayout({
 
   return (
     <StaffClientLayout
-      userEmail={result.user.email ?? "staff@emberandoak.com"}
+      userEmail={result.user.email ?? "staff@courista.com"}
       role={result.role}
       fullName={result.staffUser?.full_name ?? (result.role === "admin" ? "Administrator" : "Kitchen Staff")}
     >
