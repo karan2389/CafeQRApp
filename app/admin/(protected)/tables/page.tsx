@@ -3,14 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { 
   RefreshCw, 
-  Copy, 
   ExternalLink, 
-  Check, 
   Loader2, 
-  ShieldCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { BrandedQrModal } from "@/components/admin/branded-qr-modal";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { DbTable } from "@/types/database";
 
@@ -23,13 +21,12 @@ export default function AdminTablesPage() {
   const [loading, setLoading] = useState(true);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
-  // Modal displaying newly minted token
+  // Modal displaying newly minted token with Courista center-branded QR
   const [activeQrModal, setActiveQrModal] = useState<{
     tableNumber: number;
     token: string;
     url: string;
   } | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const fetchTables = useCallback(async () => {
     const supabase = getSupabaseClient();
@@ -134,13 +131,6 @@ export default function AdminTablesPage() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    toast.success("Copied to clipboard!");
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -241,7 +231,7 @@ export default function AdminTablesPage() {
                     size="sm"
                     className="text-stone-400 hover:text-white hover:bg-stone-800 text-xs"
                   >
-                    <a href={`/table/table-${table.table_number}`} target="_blank">
+                    <a href={`/table/table-${table.table_number}`} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                   </Button>
@@ -252,81 +242,14 @@ export default function AdminTablesPage() {
         )}
       </div>
 
-      {/* Newly Regenerated QR Modal */}
+      {/* Newly Regenerated Branded QR Modal */}
       {activeQrModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-stone-900 border border-stone-800 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95">
-            <div className="text-center space-y-2">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto ring-8 ring-amber-500/5">
-                <ShieldCheck className="w-7 h-7" />
-              </div>
-              <h2 className="text-xl font-bold text-white">
-                New QR Token for Table {activeQrModal.tableNumber}
-              </h2>
-              <p className="text-stone-400 text-xs">
-                A new cryptographically secure SHA-256 hash has been stored in the database. Previous physical QR prints for this table will no longer be valid.
-              </p>
-            </div>
-
-            {/* Link & Token Box */}
-            <div className="space-y-3 bg-stone-950 p-4 rounded-2xl border border-stone-800">
-              <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">
-                Direct Scan URL
-              </span>
-              <div className="flex justify-center py-4 bg-white rounded-xl">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(activeQrModal.url)}`}
-                  alt={`QR Code for Table ${activeQrModal.tableNumber}`}
-                  className="w-36 h-36"
-                />
-              </div>
-              <p className="font-mono text-xs text-amber-400 break-all leading-relaxed bg-stone-900/80 p-2.5 rounded-xl border border-stone-800">
-                {activeQrModal.url}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => copyToClipboard(activeQrModal.url)}
-                  className="flex-1 border-stone-700 text-stone-200 hover:bg-stone-800 text-xs"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5 mr-1.5" />
-                      Copy Scan Link
-                    </>
-                  )}
-                </Button>
-                <Button
-                  asChild
-                  size="sm"
-                  className="bg-amber-500 hover:bg-amber-400 text-stone-950 font-semibold text-xs"
-                >
-                  <a href={activeQrModal.url} target="_blank">
-                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                    Test Scan
-                  </a>
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setActiveQrModal(null)}
-                className="w-full border-stone-700 text-stone-300 hover:bg-stone-800"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
+        <BrandedQrModal
+          tableNumber={activeQrModal.tableNumber}
+          token={activeQrModal.token}
+          url={activeQrModal.url}
+          onClose={() => setActiveQrModal(null)}
+        />
       )}
     </div>
   );
