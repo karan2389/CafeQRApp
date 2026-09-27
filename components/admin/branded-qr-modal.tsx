@@ -36,9 +36,10 @@ export function BrandedQrModal({
     generateBrandedQrDataUrl(url, {
       size: 1024,
       errorCorrectionLevel: "H",
-      logoRatio: 0.20,
+      logoRatio: 0.21,
+      artworkZoom: 1.35,
       margin: 3,
-      logoSrc: "/courista/logo.png",
+      logoSrc: "/courista/courista-qr-logo.png",
       darkColor: "#000000",
       lightColor: "#FAF7F2",
       badgeBgColor: "#FAF7F2",

@@ -7,10 +7,12 @@ export interface BrandedQrOptions {
   errorCorrectionLevel?: "L" | "M" | "Q" | "H";
   /** QR quiet zone margin in modules. Default is 3 */
   margin?: number;
-  /** Center logo asset path. Default is '/courista/logo.png' */
+  /** Center logo asset path. Default is '/courista/courista-qr-logo.png' */
   logoSrc?: string;
-  /** Logo badge size as a fraction of QR total size. Target: 0.18 - 0.22. Default: 0.20 (20%) */
+  /** Logo badge size as a fraction of QR total size. Target: 0.20 - 0.22. Default: 0.21 */
   logoRatio?: number;
+  /** Zoom factor to crop excess outer whitespace and enlarge the Courista artwork inside the badge. Default: 1.35 */
+  artworkZoom?: number;
   /** Dark module color. Default is #000000 */
   darkColor?: string;
   /** Light background color. Default is #FAF7F2 (Courista Cream) */
@@ -21,7 +23,7 @@ export interface BrandedQrOptions {
   badgeBorderColor?: string;
   /** Badge border width. Default is 2 */
   badgeBorderWidth?: number;
-  /** Badge corner radius. Default is 14 */
+  /** Badge corner radius. Default is proportional to size (~26px at 1024) */
   badgeRadius?: number;
 }
 
@@ -50,7 +52,7 @@ function drawRoundedRect(
 }
 
 /**
- * Generates a high-resolution Branded Courista QR Code with the Courista logo
+ * Generates a high-resolution Branded Courista QR Code with the enlarged Courista logo
  * embedded in the center, resting on a clean protective backing with Error Correction Level H.
  */
 export async function generateBrandedQrDataUrl(
@@ -61,14 +63,15 @@ export async function generateBrandedQrDataUrl(
     size = 1024,
     errorCorrectionLevel = "H",
     margin = 3,
-    logoSrc = "/courista/logo.png",
-    logoRatio = 0.20,
+    logoSrc = "/courista/courista-qr-logo.png",
+    logoRatio = 0.21,
+    artworkZoom = 1.35,
     darkColor = "#000000",
     lightColor = "#FAF7F2",
     badgeBgColor = "#FAF7F2",
     badgeBorderColor = "#E7DDD2",
     badgeBorderWidth = 2,
-    badgeRadius = Math.round(size * 0.025), // scale with size ~25px at 1024
+    badgeRadius = Math.round(size * 0.026),
   } = options;
 
   if (typeof window === "undefined") {
@@ -90,7 +93,7 @@ export async function generateBrandedQrDataUrl(
     throw new Error("Could not acquire 2D canvas context");
   }
 
-  // 1. Render base QR code onto canvas
+  // 1. Render base QR code onto canvas (Level H error correction, preserving quiet zone)
   await QRCode.toCanvas(canvas, text, {
     width: size,
     margin,
@@ -111,13 +114,11 @@ export async function generateBrandedQrDataUrl(
       img.src = logoSrc;
     });
 
-    // 3. Compute dimensions for protective badge & logo
-    // Badge size is 20% of QR size (within 18-22% specification)
+    // 3. Compute dimensions for protective badge & center placement
     const badgeSize = Math.round(size * logoRatio);
     const badgeX = Math.round((size - badgeSize) / 2);
     const badgeY = Math.round((size - badgeSize) / 2);
 
-    // Save context state
     ctx.save();
 
     // 4. Draw Protective Backing (Clean cream/white background with smooth corners & subtle border)
@@ -131,29 +132,55 @@ export async function generateBrandedQrDataUrl(
       ctx.stroke();
     }
 
-    // 5. Draw Courista Logo inside badge (preserving original aspect ratio & centered)
-    const padding = Math.round(badgeSize * 0.08); // 8% inner padding
+    // 5. Calculate Zoom/Crop on source image to eliminate excess outer whitespace
+    // Crop center portion of source image according to artworkZoom
+    const srcW = logoImg.naturalWidth || logoImg.width;
+    const srcH = logoImg.naturalHeight || logoImg.height;
+
+    // The cropped area centered on the logo
+    const cropW = srcW / artworkZoom;
+    const cropH = srcH / artworkZoom;
+    const cropX = (srcW - cropW) / 2;
+    const cropY = (srcH - cropH) / 2;
+
+    // 6. Scale and draw the zoomed Courista artwork inside the badge
+    const padding = Math.round(badgeSize * 0.06); // 6% padding inside badge
     const maxInnerW = badgeSize - padding * 2;
     const maxInnerH = badgeSize - padding * 2;
 
-    const imgAspect = logoImg.width / logoImg.height;
+    const cropAspect = cropW / cropH;
     let drawW = maxInnerW;
     let drawH = maxInnerH;
 
-    if (imgAspect > 1) {
-      // Landscape logo (wider than tall)
+    if (cropAspect > 1) {
+      // Landscape crop (wider than tall)
       drawW = maxInnerW;
-      drawH = Math.round(maxInnerW / imgAspect);
+      drawH = Math.round(maxInnerW / cropAspect);
     } else {
-      // Portrait or square logo
+      // Portrait or square crop
       drawH = maxInnerH;
-      drawW = Math.round(maxInnerH * imgAspect);
+      drawW = Math.round(maxInnerH * cropAspect);
     }
 
     const drawX = Math.round(badgeX + (badgeSize - drawW) / 2);
     const drawY = Math.round(badgeY + (badgeSize - drawH) / 2);
 
-    ctx.drawImage(logoImg, drawX, drawY, drawW, drawH);
+    // Clip to rounded badge area to ensure no artwork overflows the protective backing
+    ctx.beginPath();
+    drawRoundedRect(ctx, badgeX, badgeY, badgeSize, badgeSize, badgeRadius);
+    ctx.clip();
+
+    ctx.drawImage(
+      logoImg,
+      cropX,
+      cropY,
+      cropW,
+      cropH,
+      drawX,
+      drawY,
+      drawW,
+      drawH
+    );
 
     ctx.restore();
   } catch (err) {
