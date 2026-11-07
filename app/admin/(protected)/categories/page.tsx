@@ -1,21 +1,37 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { Plus, Edit2, Trash2, X, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import { getSupabaseClient } from "@/lib/supabase/client";
-import type { DbMenuCategory } from "@/types/database";
+
+interface CategoryDoc {
+  _id: Id<"menuCategories">;
+  name: string;
+  slug: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt?: number;
+  updatedAt?: number;
+}
 
 export default function AdminCategoriesPage() {
-  const [categories, setCategories] = useState<DbMenuCategory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const categories = useQuery(api.categories.getAdminCategories);
+  const menuItems = useQuery(api.menu.getAdminMenuItems);
+
+  const createCategoryMutation = useMutation(api.categories.createCategory);
+  const updateCategoryMutation = useMutation(api.categories.updateCategory);
+  const deleteCategoryMutation = useMutation(api.categories.deleteCategory);
+
+  const loading = categories === undefined;
   const [saving, setSaving] = useState(false);
-  const [defaultBranchId, setDefaultBranchId] = useState<string | null>(null);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<DbMenuCategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState<CategoryDoc | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -24,68 +40,26 @@ export default function AdminCategoriesPage() {
   });
 
   // Delete Confirmation State
-  const [deletingCategory, setDeletingCategory] = useState<DbMenuCategory | null>(null);
-  const [itemCountForCategory, setItemCountForCategory] = useState<number | null>(null);
-
-  const fetchCategories = useCallback(async () => {
-    try {
-      const res = await fetch("/api/admin/categories", {
-        headers: { "Cache-Control": "no-cache" },
-      });
-
-      if (!res.ok) {
-        const errorData = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(errorData.error || `HTTP error ${res.status}`);
-      }
-
-      const data = (await res.json()) as DbMenuCategory[];
-      setCategories(Array.isArray(data) ? data : []);
-
-      // Also get default branch ID if available
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const { data: branch } = await supabase.from("branches").select("id").limit(1).maybeSingle();
-        if (branch) setDefaultBranchId(branch.id);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to load categories";
-      toast.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-    const timer = window.setTimeout(() => {
-      if (isMounted) {
-        void fetchCategories();
-      }
-    }, 0);
-    return () => {
-      isMounted = false;
-      window.clearTimeout(timer);
-    };
-  }, [fetchCategories]);
+  const [deletingCategory, setDeletingCategory] = useState<CategoryDoc | null>(null);
 
   const openCreateModal = () => {
     setEditingCategory(null);
     setFormData({
       name: "",
       slug: "",
-      display_order: (categories.length + 1) * 10,
+      display_order: ((categories?.length ?? 0) + 1) * 10,
       is_active: true,
     });
     setIsModalOpen(true);
   };
 
-  const openEditModal = (cat: DbMenuCategory) => {
+  const openEditModal = (cat: CategoryDoc) => {
     setEditingCategory(cat);
     setFormData({
       name: cat.name,
       slug: cat.slug,
-      display_order: cat.display_order,
-      is_active: cat.is_active,
+      display_order: cat.displayOrder,
+      is_active: cat.isActive,
     });
     setIsModalOpen(true);
   };
@@ -109,46 +83,27 @@ export default function AdminCategoriesPage() {
     setSaving(true);
     try {
       if (editingCategory) {
-        const res = await fetch(`/api/admin/categories/${editingCategory.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: formData.name.trim(),
-            slug: formData.slug.trim().toLowerCase(),
-            display_order: Number(formData.display_order),
-            is_active: formData.is_active,
-          }),
+        await updateCategoryMutation({
+          categoryId: editingCategory._id,
+          name: formData.name.trim(),
+          slug: formData.slug.trim().toLowerCase(),
+          displayOrder: Number(formData.display_order),
+          isActive: formData.is_active,
         });
-
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to update category");
-        }
 
         toast.success(`Category "${formData.name}" updated!`);
       } else {
-        const res = await fetch("/api/admin/categories", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            branch_id: defaultBranchId,
-            name: formData.name.trim(),
-            slug: formData.slug.trim().toLowerCase(),
-            display_order: Number(formData.display_order),
-            is_active: formData.is_active,
-          }),
+        await createCategoryMutation({
+          name: formData.name.trim(),
+          slug: formData.slug.trim().toLowerCase(),
+          displayOrder: Number(formData.display_order),
+          isActive: formData.is_active,
         });
-
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to create category");
-        }
 
         toast.success(`Category "${formData.name}" created!`);
       }
 
       setIsModalOpen(false);
-      await fetchCategories();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save category";
       toast.error(msg);
@@ -157,23 +112,14 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const toggleActive = async (cat: DbMenuCategory) => {
+  const toggleActive = async (cat: CategoryDoc) => {
     try {
-      const newStatus = !cat.is_active;
-      const res = await fetch(`/api/admin/categories/${cat.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_active: newStatus }),
+      const newStatus = !cat.isActive;
+      await updateCategoryMutation({
+        categoryId: cat._id,
+        isActive: newStatus,
       });
 
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to toggle status");
-      }
-
-      setCategories((prev) =>
-        prev.map((c) => (c.id === cat.id ? { ...c, is_active: newStatus } : c))
-      );
       toast.success(`${cat.name} is now ${newStatus ? "active" : "hidden"}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to toggle status";
@@ -181,38 +127,25 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const confirmDelete = async (cat: DbMenuCategory) => {
+  const confirmDelete = (cat: CategoryDoc) => {
     setDeletingCategory(cat);
-    setItemCountForCategory(null);
-
-    // Check count of menu items in this category
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      const { count } = await supabase
-        .from("menu_items")
-        .select("id", { count: "exact", head: true })
-        .eq("category_id", cat.id);
-      setItemCountForCategory(count ?? 0);
-    }
   };
+
+  const itemCountForCategory = deletingCategory
+    ? (menuItems?.filter((i) => i.categoryId === deletingCategory._id).length ?? 0)
+    : 0;
 
   const executeHardDelete = async () => {
     if (!deletingCategory) return;
     setSaving(true);
 
     try {
-      const res = await fetch(`/api/admin/categories/${deletingCategory.id}`, {
-        method: "DELETE",
+      await deleteCategoryMutation({
+        categoryId: deletingCategory._id,
       });
-
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to delete category");
-      }
 
       toast.success(`Category "${deletingCategory.name}" deleted.`);
       setDeletingCategory(null);
-      await fetchCategories();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to delete category";
       toast.error(msg);
@@ -244,9 +177,9 @@ export default function AdminCategoriesPage() {
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center text-stone-400 space-y-3">
             <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-            <p className="text-sm">Loading categories from Supabase...</p>
+            <p className="text-sm">Loading categories from Convex...</p>
           </div>
-        ) : categories.length === 0 ? (
+        ) : !categories || categories.length === 0 ? (
           <div className="py-16 text-center text-stone-400 space-y-3">
             <p className="text-base font-medium text-stone-300">No categories found</p>
             <p className="text-xs text-stone-500 max-w-sm mx-auto">
@@ -270,9 +203,9 @@ export default function AdminCategoriesPage() {
               </thead>
               <tbody className="divide-y divide-stone-800/80 font-normal">
                 {categories.map((cat) => (
-                  <tr key={cat.id} className="hover:bg-stone-850/40 transition-colors">
+                  <tr key={cat._id} className="hover:bg-stone-850/40 transition-colors">
                     <td className="px-6 py-4 font-mono text-xs text-stone-400">
-                      <span className="bg-stone-800 px-2.5 py-1 rounded-md">{cat.display_order}</span>
+                      <span className="bg-stone-800 px-2.5 py-1 rounded-md">{cat.displayOrder}</span>
                     </td>
                     <td className="px-6 py-4 font-semibold text-white">{cat.name}</td>
                     <td className="px-6 py-4 font-mono text-xs text-amber-400/90">{cat.slug}</td>
@@ -280,12 +213,12 @@ export default function AdminCategoriesPage() {
                       <button
                         onClick={() => toggleActive(cat)}
                         className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                          cat.is_active
+                          cat.isActive
                             ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
                             : "bg-stone-800 text-stone-400 border border-stone-700 hover:bg-stone-750"
                         }`}
                       >
-                        {cat.is_active ? "Active" : "Hidden"}
+                        {cat.isActive ? "Active" : "Hidden"}
                       </button>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
@@ -422,14 +355,14 @@ export default function AdminCategoriesPage() {
 
             <div className="text-center space-y-2">
               <h2 className="text-lg font-bold text-white">
-                {itemCountForCategory && itemCountForCategory > 0
+                {itemCountForCategory > 0
                   ? "Cannot Delete Category"
                   : "Permanently Delete Category?"}
               </h2>
               <p className="text-stone-400 text-sm">
                 Category: <strong className="text-white">{deletingCategory.name}</strong>
               </p>
-              {itemCountForCategory !== null && itemCountForCategory > 0 ? (
+              {itemCountForCategory > 0 ? (
                 <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-xs text-left space-y-1">
                   <p className="font-semibold">⚠️ Deletion Blocked</p>
                   <p>
@@ -450,16 +383,16 @@ export default function AdminCategoriesPage() {
                 onClick={() => setDeletingCategory(null)}
                 className="border-stone-700 text-stone-300 hover:bg-stone-800"
               >
-                {itemCountForCategory && itemCountForCategory > 0 ? "Close" : "Cancel"}
+                {itemCountForCategory > 0 ? "Close" : "Cancel"}
               </Button>
               <Button
                 variant="destructive"
                 onClick={executeHardDelete}
-                disabled={saving || Boolean(itemCountForCategory && itemCountForCategory > 0)}
+                disabled={saving || itemCountForCategory > 0}
                 className="bg-red-600 hover:bg-red-500 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                {itemCountForCategory && itemCountForCategory > 0 ? "Deletion Blocked" : "Confirm Delete"}
+                {itemCountForCategory > 0 ? "Deletion Blocked" : "Confirm Delete"}
               </Button>
             </div>
           </div>

@@ -1,14 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminApi } from "@/lib/auth/admin";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
 import { uploadMenuImage } from "@/lib/r2/upload";
 import { hasR2Configured } from "@/lib/r2/client";
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Verify caller is an authenticated admin
-    const auth = await requireAdminApi();
-    if (!auth.authorized) {
-      return auth.response;
+    // 1. Verify caller is an authenticated admin via Convex Auth
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized: Missing authentication token" }, { status: 401 });
+    }
+
+    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+    convex.setAuth(token);
+    let viewer;
+    try {
+      viewer = await convex.query(api.users.viewer);
+    } catch {
+      return NextResponse.json({ error: "Unauthorized: Invalid or expired token" }, { status: 401 });
+    }
+
+    if (!viewer || viewer.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden: Administrator privileges required" }, { status: 403 });
     }
 
     // 2. Parse file from multipart form data

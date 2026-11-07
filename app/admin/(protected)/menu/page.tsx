@@ -1,28 +1,52 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
-import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Upload, 
-  X, 
-  Loader2, 
-  AlertTriangle, 
+import { useState, useRef } from "react";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Upload,
+  X,
+  Loader2,
+  AlertTriangle,
   Image as ImageIcon,
   ShieldAlert,
-  Search
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useMutation } from "convex/react";
+import { useConvexAuth } from "@convex-dev/auth/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import { getSupabaseClient } from "@/lib/supabase/client";
 import { formatINR } from "@/lib/format";
-import type { DbMenuItem, DbMenuCategory } from "@/types/database";
+
+interface MenuItemDoc {
+  _id: Id<"menuItems">;
+  categoryId: Id<"menuCategories">;
+  categoryName?: string;
+  name: string;
+  description?: string;
+  pricePaise: number;
+  imageUrl?: string;
+  isAvailable: boolean;
+  requiresAgeConfirmation: boolean;
+  displayOrder: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
 
 export default function AdminMenuPage() {
-  const [items, setItems] = useState<DbMenuItem[]>([]);
-  const [categories, setCategories] = useState<DbMenuCategory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const categories = useQuery(api.categories.getAdminCategories);
+  const items = useQuery(api.menu.getAdminMenuItems);
+  const { fetchAccessToken } = useConvexAuth();
+
+  const createMenuItemMutation = useMutation(api.menu.createMenuItem);
+  const updateMenuItemMutation = useMutation(api.menu.updateMenuItem);
+  const toggleAvailabilityMutation = useMutation(api.menu.toggleItemAvailability);
+  const deleteMenuItemMutation = useMutation(api.menu.deleteMenuItem);
+
+  const loading = items === undefined || categories === undefined;
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,12 +56,21 @@ export default function AdminMenuPage() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<DbMenuItem | null>(null);
-  const [formData, setFormData] = useState({
+  const [editingItem, setEditingItem] = useState<MenuItemDoc | null>(null);
+  const [formData, setFormData] = useState<{
+    name: string;
+    category_id: string;
+    description: string;
+    price: number;
+    image_url: string;
+    is_available: boolean;
+    requires_age_confirmation: boolean;
+    display_order: number;
+  }>({
     name: "",
     category_id: "",
     description: "",
-    price: 0,
+    price: 150,
     image_url: "",
     is_available: true,
     requires_age_confirmation: false,
@@ -45,74 +78,34 @@ export default function AdminMenuPage() {
   });
 
   // Delete Confirmation State
-  const [deletingItem, setDeletingItem] = useState<DbMenuItem | null>(null);
-
-  const fetchData = useCallback(async () => {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      toast.error("Supabase not configured. Please check environment variables.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const [catsRes, itemsRes] = await Promise.all([
-        supabase.from("menu_categories").select("*").order("display_order", { ascending: true }),
-        supabase.from("menu_items").select("*").order("display_order", { ascending: true }),
-      ]);
-
-      if (catsRes.error) throw catsRes.error;
-      if (itemsRes.error) throw itemsRes.error;
-
-      setCategories(catsRes.data || []);
-      setItems(itemsRes.data || []);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to load menu data";
-      toast.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-    const timer = window.setTimeout(() => {
-      if (isMounted) {
-        void fetchData();
-      }
-    }, 0);
-    return () => {
-      isMounted = false;
-      window.clearTimeout(timer);
-    };
-  }, [fetchData]);
+  const [deletingItem, setDeletingItem] = useState<MenuItemDoc | null>(null);
 
   const openCreateModal = () => {
     setEditingItem(null);
     setFormData({
       name: "",
-      category_id: categories[0]?.id || "",
+      category_id: categories?.[0]?._id ?? "",
       description: "",
       price: 150,
       image_url: "",
       is_available: true,
       requires_age_confirmation: false,
-      display_order: (items.length + 1) * 10,
+      display_order: ((items?.length ?? 0) + 1) * 10,
     });
     setIsModalOpen(true);
   };
 
-  const openEditModal = (item: DbMenuItem) => {
+  const openEditModal = (item: MenuItemDoc) => {
     setEditingItem(item);
     setFormData({
       name: item.name,
-      category_id: item.category_id,
+      category_id: item.categoryId,
       description: item.description || "",
-      price: Number(item.price),
-      image_url: item.image_url || "",
-      is_available: item.is_available,
-      requires_age_confirmation: item.requires_age_confirmation,
-      display_order: item.display_order,
+      price: item.pricePaise / 100,
+      image_url: item.imageUrl || "",
+      is_available: item.isAvailable,
+      requires_age_confirmation: item.requiresAgeConfirmation,
+      display_order: item.displayOrder,
     });
     setIsModalOpen(true);
   };
@@ -131,8 +124,10 @@ export default function AdminMenuPage() {
     form.append("file", file);
 
     try {
+      const token = await fetchAccessToken({ forceRefreshToken: false });
       const res = await fetch("/api/admin/upload", {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
       });
 
@@ -163,57 +158,45 @@ export default function AdminMenuPage() {
       return;
     }
 
+    const pricePaise = Math.round(Number(formData.price) * 100);
+    if (!Number.isInteger(pricePaise) || pricePaise <= 0) {
+      toast.error("Price must be a valid positive amount");
+      return;
+    }
+
     setSaving(true);
 
     try {
       if (editingItem) {
-        // Update existing item via API
-        const res = await fetch(`/api/admin/menu/${editingItem.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: formData.name.trim(),
-            category_id: formData.category_id,
-            description: formData.description.trim() || null,
-            price: Number(formData.price),
-            image_url: formData.image_url.trim() || null,
-            is_available: formData.is_available,
-            requires_age_confirmation: formData.requires_age_confirmation,
-            display_order: Number(formData.display_order),
-          }),
+        await updateMenuItemMutation({
+          menuItemId: editingItem._id,
+          name: formData.name.trim(),
+          categoryId: formData.category_id as Id<"menuCategories">,
+          description: formData.description.trim() || undefined,
+          pricePaise,
+          imageUrl: formData.image_url.trim() || "",
+          isAvailable: formData.is_available,
+          requiresAgeConfirmation: formData.requires_age_confirmation,
+          displayOrder: Number(formData.display_order),
         });
 
-        const data = (await res.json()) as { error?: string; item?: DbMenuItem };
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to update item");
-        }
         toast.success(`Updated "${formData.name}"`);
       } else {
-        // Create new item via API
-        const res = await fetch("/api/admin/menu", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: formData.name.trim(),
-            category_id: formData.category_id,
-            description: formData.description.trim() || null,
-            price: Number(formData.price),
-            image_url: formData.image_url.trim() || null,
-            is_available: formData.is_available,
-            requires_age_confirmation: formData.requires_age_confirmation,
-            display_order: Number(formData.display_order),
-          }),
+        await createMenuItemMutation({
+          name: formData.name.trim(),
+          categoryId: formData.category_id as Id<"menuCategories">,
+          description: formData.description.trim() || undefined,
+          pricePaise,
+          imageUrl: formData.image_url.trim() || undefined,
+          isAvailable: formData.is_available,
+          requiresAgeConfirmation: formData.requires_age_confirmation,
+          displayOrder: Number(formData.display_order),
         });
 
-        const data = (await res.json()) as { error?: string; item?: DbMenuItem };
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to create item");
-        }
         toast.success(`Created "${formData.name}"`);
       }
 
       setIsModalOpen(false);
-      await fetchData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save item";
       toast.error(msg);
@@ -222,23 +205,14 @@ export default function AdminMenuPage() {
     }
   };
 
-  const toggleAvailability = async (item: DbMenuItem) => {
+  const toggleAvailability = async (item: MenuItemDoc) => {
     try {
-      const newStatus = !item.is_available;
-      const res = await fetch(`/api/admin/menu/${item.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_available: newStatus }),
+      const newStatus = !item.isAvailable;
+      await toggleAvailabilityMutation({
+        menuItemId: item._id,
+        isAvailable: newStatus,
       });
 
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to toggle availability");
-      }
-
-      setItems((prev) =>
-        prev.map((i) => (i.id === item.id ? { ...i, is_available: newStatus } : i))
-      );
       toast.success(`${item.name} is now ${newStatus ? "in stock" : "marked sold out"}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to toggle availability";
@@ -251,18 +225,12 @@ export default function AdminMenuPage() {
     setSaving(true);
 
     try {
-      const res = await fetch(`/api/admin/menu/${deletingItem.id}`, {
-        method: "DELETE",
+      await deleteMenuItemMutation({
+        menuItemId: deletingItem._id,
       });
-
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to delete item");
-      }
 
       toast.success(`Permanently deleted "${deletingItem.name}"`);
       setDeletingItem(null);
-      await fetchData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to delete item";
       toast.error(msg);
@@ -271,12 +239,12 @@ export default function AdminMenuPage() {
     }
   };
 
-  const filteredItems = items.filter((item) => {
+  const filteredItems = (items ?? []).filter((item) => {
     const matchesSearch =
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory =
-      selectedCategoryFilter === "all" || item.category_id === selectedCategoryFilter;
+      selectedCategoryFilter === "all" || item.categoryId === selectedCategoryFilter;
     return matchesSearch && matchesCategory;
   });
 
@@ -318,9 +286,9 @@ export default function AdminMenuPage() {
             onChange={(e) => setSelectedCategoryFilter(e.target.value)}
             className="w-full sm:w-48 bg-stone-800 border border-stone-700 text-stone-200 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
           >
-            <option value="all">All Categories ({items.length})</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
+            <option value="all">All Categories ({items?.length ?? 0})</option>
+            {(categories ?? []).map((c) => (
+              <option key={c._id} value={c._id}>
                 {c.name}
               </option>
             ))}
@@ -333,7 +301,7 @@ export default function AdminMenuPage() {
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center text-stone-400 space-y-3">
             <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-            <p className="text-sm">Loading menu items from Supabase...</p>
+            <p className="text-sm">Loading menu items from Convex...</p>
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="py-16 text-center text-stone-400 space-y-3">
@@ -363,16 +331,19 @@ export default function AdminMenuPage() {
               <tbody className="divide-y divide-stone-800/80 font-normal">
                 {filteredItems.map((item) => {
                   const categoryName =
-                    categories.find((c) => c.id === item.category_id)?.name || "Uncategorized";
+                    item.categoryName ||
+                    categories?.find((c) => c._id === item.categoryId)?.name ||
+                    "Uncategorized";
 
                   return (
-                    <tr key={item.id} className="hover:bg-stone-850/40 transition-colors">
+                    <tr key={item._id} className="hover:bg-stone-850/40 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3.5">
                           <div className="w-12 h-12 rounded-xl bg-stone-800 border border-stone-700/80 overflow-hidden shrink-0 flex items-center justify-center text-stone-500 relative">
-                            {item.image_url ? (
+                            {item.imageUrl ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
                               <img
-                                src={item.image_url}
+                                src={item.imageUrl}
                                 alt={item.name}
                                 className="w-full h-full object-cover"
                               />
@@ -396,24 +367,24 @@ export default function AdminMenuPage() {
                       </td>
 
                       <td className="px-6 py-4 font-semibold text-amber-400">
-                        {formatINR(item.price)}
+                        {formatINR(item.pricePaise / 100)}
                       </td>
 
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => toggleAvailability(item)}
                           className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                            item.is_available
+                            item.isAvailable
                               ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
                               : "bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
                           }`}
                         >
-                          {item.is_available ? "In Stock" : "Sold Out"}
+                          {item.isAvailable ? "In Stock" : "Sold Out"}
                         </button>
                       </td>
 
                       <td className="px-6 py-4 text-center">
-                        {item.requires_age_confirmation ? (
+                        {item.requiresAgeConfirmation ? (
                           <span className="inline-flex items-center gap-1 text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md font-medium">
                             <ShieldAlert className="w-3 h-3" />
                             18+ Required
@@ -462,7 +433,7 @@ export default function AdminMenuPage() {
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-stone-400 hover:text-white rounded-lg p-1"
+                className="text-stone-400 hover:text-white rounded-lg p-1 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -497,8 +468,8 @@ export default function AdminMenuPage() {
                     <option value="" disabled>
                       Select Category
                     </option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
+                    {(categories ?? []).map((c) => (
+                      <option key={c._id} value={c._id}>
                         {c.name}
                       </option>
                     ))}
@@ -550,6 +521,7 @@ export default function AdminMenuPage() {
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-xl bg-stone-800 border border-stone-700 overflow-hidden shrink-0 flex items-center justify-center text-stone-500 relative">
                     {formData.image_url ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={formData.image_url}
                         alt="Preview"

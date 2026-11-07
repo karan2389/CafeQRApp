@@ -8,7 +8,7 @@ import {
   ALLOWED_STATUS_TRANSITIONS,
   VALID_KITCHEN_STATUSES,
   type KitchenOrderStatus,
-} from "../app/api/staff/orders/[id]/route";
+} from "../features/kitchen/kitchen-status";
 
 let passedCount = 0;
 let failedCount = 0;

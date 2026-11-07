@@ -2,6 +2,24 @@ import type { DemoOrder, DemoTable, OrderStatus } from "@/types";
 
 export type VisualState = "INACTIVE" | "ACTIVE" | "NEW" | "PREPARING" | "DELIVERED";
 
+export type KitchenOrderStatus = "PENDING" | "NEW" | "PREPARING" | "DELIVERED" | "CANCELLED";
+
+export const VALID_KITCHEN_STATUSES: readonly KitchenOrderStatus[] = [
+  "PENDING",
+  "NEW",
+  "PREPARING",
+  "DELIVERED",
+  "CANCELLED",
+] as const;
+
+export const ALLOWED_STATUS_TRANSITIONS: Record<KitchenOrderStatus, KitchenOrderStatus[]> = {
+  PENDING: ["PREPARING", "CANCELLED"],
+  NEW: ["PREPARING", "CANCELLED"],
+  PREPARING: ["DELIVERED", "CANCELLED"],
+  DELIVERED: [],
+  CANCELLED: [],
+};
+
 export const visualMeta: Record<VisualState, { label: string; card: string; dot: string }> = {
   INACTIVE: { label: "Inactive", card: "border-[#d8d5d0] bg-[#eeece8] text-[#837d77]", dot: "bg-[#9f9992]" },
   ACTIVE: { label: "Active", card: "border-[#cadbcf] bg-[#f5faf5]", dot: "bg-[#4c805d]" },

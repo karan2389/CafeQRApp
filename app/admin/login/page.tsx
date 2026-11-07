@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Coffee, Lock, Mail, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
+import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import { getSupabaseClient } from "@/lib/supabase/client";
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const { signIn, signOut } = useAuthActions();
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+  const viewer = useQuery(api.users.viewer);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(() => {
@@ -17,6 +23,9 @@ export default function AdminLoginPage() {
       if (err === "forbidden") {
         return "Access denied: You do not have administrator permissions.";
       }
+      if (err === "unauthorized") {
+        return "Please sign in to access the administrator portal.";
+      }
       if (err === "session_expired") {
         return "Your session has expired. Please sign in again.";
       }
@@ -25,60 +34,71 @@ export default function AdminLoginPage() {
   });
   const [loading, setLoading] = useState(false);
 
+  // If already authenticated with admin permissions, redirect to admin dashboard
+  useEffect(() => {
+    if (isAuthenticated && viewer) {
+      if (viewer.role === "admin") {
+        const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+        const rawRedirect = searchParams?.get("redirectTo") || "/admin";
+        const redirectTo =
+          rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") && !rawRedirect.includes(":")
+            ? rawRedirect
+            : "/admin";
+        router.replace(redirectTo);
+      } else if (viewer.role === "kitchen_staff") {
+        void signOut().then(() => {
+          router.replace("/admin/login?error=forbidden");
+        });
+      }
+    }
+  }, [isAuthenticated, viewer, router, signOut]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const supabase = getSupabaseClient();
-      if (!supabase) {
-        // Local demo mode fallback
-        if (email === "admin@emberandoak.com" || email === "admin") {
-          router.push("/admin");
-          return;
-        }
-        setError("Supabase client is not configured. For demo access, use admin@emberandoak.com.");
-        setLoading(false);
-        return;
-      }
-
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
+      await signIn("password", {
+        email: email.trim().toLowerCase(),
         password,
+        flow: "signIn",
       });
 
-      if (authError || !data.user) {
-        setError(authError?.message || "Invalid email or password.");
-        setLoading(false);
-        return;
-      }
-
-      // Check admin status
-      const { data: isAdmin, error: adminError } = await supabase.rpc("is_admin");
-      if (adminError || !isAdmin) {
-        setError("Access denied: You do not have administrator permissions.");
-        await supabase.auth.signOut();
-        setLoading(false);
-        return;
-      }
-
-      const searchParams =
-        typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      // Authentication state will update reactively; effect will redirect or verify role
+      const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
       const rawRedirect = searchParams?.get("redirectTo") || "/admin";
-      // Sanitize redirectTo to prevent open redirects (must be relative path starting with single /)
       const redirectTo =
         rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") && !rawRedirect.includes(":")
           ? rawRedirect
           : "/admin";
-      router.push(redirectTo);
-      router.refresh();
+
+      router.replace(redirectTo);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
+      console.error("[AdminLogin] Authentication error:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (
+        msg.includes("Could not find user") ||
+        msg.includes("Invalid password") ||
+        msg.includes("PasswordInvalid") ||
+        msg.includes("Account does not exist")
+      ) {
+        setError("Invalid email or password.");
+      } else {
+        setError("Sign in failed. Please check your credentials or contact management.");
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-950 px-4 text-stone-100">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-stone-950 px-4 py-12 text-stone-100 selection:bg-amber-500 selection:text-white">
@@ -112,7 +132,7 @@ export default function AdminLoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@emberandoak.com"
+                placeholder="admin@courista.cafe"
                 className="w-full pl-10 pr-4 py-2.5 bg-stone-800/80 border border-stone-700/80 rounded-xl text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all text-sm"
               />
             </div>
@@ -149,16 +169,16 @@ export default function AdminLoginPage() {
               </>
             ) : (
               <>
-                <span>Sign In to Dashboard</span>
+                <span>Sign In as Administrator</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </Button>
         </form>
 
-        <div className="text-center pt-2">
-          <p className="text-xs text-stone-400">
-            Protected area. Authorized cafe management personnel only.
+        <div className="pt-4 border-t border-stone-800/80 text-center">
+          <p className="text-xs text-stone-500">
+            Courista Cafe Operating System · Ember & Oak
           </p>
         </div>
       </div>

@@ -1,15 +1,41 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Coffee, LayoutDashboard, UtensilsCrossed, FolderTree, QrCode, LogOut, ExternalLink } from "lucide-react";
-import { getSupabaseClient } from "@/lib/supabase/client";
+import {
+  Coffee,
+  LayoutDashboard,
+  UtensilsCrossed,
+  FolderTree,
+  QrCode,
+  LogOut,
+  ExternalLink,
+  Loader2,
+} from "lucide-react";
+import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { signOut } = useAuthActions();
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+  const viewer = useQuery(api.users.viewer);
 
-
+  // Authentication and role enforcement guard
+  useEffect(() => {
+    if (!authLoading && viewer !== undefined) {
+      if (!isAuthenticated || viewer === null) {
+        router.replace("/admin/login?error=unauthorized");
+        return;
+      }
+      if (viewer.role !== "admin") {
+        router.replace("/admin/login?error=forbidden");
+      }
+    }
+  }, [authLoading, isAuthenticated, viewer, router]);
 
   const navLinks = [
     { label: "Overview", href: "/admin", icon: LayoutDashboard },
@@ -20,17 +46,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleSignOut = async () => {
     try {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        await supabase.auth.signOut();
-      }
-      await fetch("/api/admin/auth/logout", { method: "POST" });
+      await signOut();
     } catch {
-      // Ignore network errors on logout
+      // Preserve existing sign-out behavior
     }
     router.push("/admin/login");
     router.refresh();
   };
+
+  // While checking auth status or loading viewer profile, display clean loader
+  if (authLoading || viewer === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-950 text-amber-500">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // If unauthorized, do not render children
+  if (!isAuthenticated || !viewer || viewer.role !== "admin") {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col md:flex-row">
@@ -75,6 +111,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Footer controls */}
         <div className="p-4 border-t border-stone-800/80 space-y-2">
+          <div className="px-4 py-2 text-xs text-stone-400">
+            <p className="font-semibold text-stone-200">{viewer.name || "Administrator"}</p>
+            <p className="truncate text-stone-500">{viewer.email}</p>
+          </div>
+
           <Link
             href="/"
             target="_blank"
@@ -89,7 +130,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             Sign Out

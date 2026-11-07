@@ -181,6 +181,11 @@ export function CustomerOrderTracker({
                       >
                         {ORDER_STATUS_LABELS[order.status]}
                       </span>
+                      {order.isCurrentDevice && (
+                        <span className="rounded-full bg-[#f2e5d5] px-2 py-0.5 text-[11px] font-semibold text-[#8c3e16]">
+                          This device
+                        </span>
+                      )}
                     </div>
                     <span className="mt-0.5 text-xs text-[#8a7b70]">
                       Placed {formatTime(order.createdAt)} · {itemCount} {itemCount === 1 ? "item" : "items"}

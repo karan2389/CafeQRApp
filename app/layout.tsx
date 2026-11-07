@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/sonner";
 import { DemoWebMcp } from "@/app/components/demo-webmcp";
+import { ConvexClientProvider } from "@/components/providers/convex-client-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,9 +21,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
-        <DemoWebMcp />
-        <Toaster richColors position="top-right" />
+        <ConvexClientProvider>
+          {children}
+          <DemoWebMcp />
+          <Toaster richColors position="top-right" />
+        </ConvexClientProvider>
       </body>
     </html>
   );

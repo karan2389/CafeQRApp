@@ -33,6 +33,8 @@ export interface DemoOrder {
   subtotalPaise?: number;
   /** @deprecated Legacy field preserved for backwards compatibility */
   totalPaise?: number;
+  /** Whether this order was placed from the current diner device scan session */
+  isCurrentDevice?: boolean;
 }
 
 export interface CreateOrderInput {

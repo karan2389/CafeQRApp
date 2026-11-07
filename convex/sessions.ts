@@ -168,3 +168,62 @@ export const internalSetCustomerSessionState = mutation({
     });
   },
 });
+
+/**
+ * Staff-only query to fetch all active table sessions.
+ * Returns table sessions currently in "ACTIVE" state with order and billing summaries.
+ * Guarded strictly by requireStaff (kitchen staff and admin).
+ */
+export const getActiveTableSessions = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireStaff(ctx);
+
+    const activeSessions = await ctx.db
+      .query("tableOrderSessions")
+      .withIndex("by_status", (q) => q.eq("status", "ACTIVE"))
+      .collect();
+
+    const results = await Promise.all(
+      activeSessions.map(async (session) => {
+        const table = await ctx.db.get(session.tableId);
+        const orders = await ctx.db
+          .query("orders")
+          .withIndex("by_table_session", (q) =>
+            q.eq("tableOrderSessionId", session._id)
+          )
+          .collect();
+
+        const deliveredOrders = orders.filter((o) => o.status === "DELIVERED" || o.status === "PAID");
+        const unfinishedOrders = orders.filter(
+          (o) => o.status === "NEW" || o.status === "PREPARING" || o.status === "PENDING"
+        );
+        const cancelledOrders = orders.filter((o) => o.status === "CANCELLED");
+
+        const runningBillPaise = deliveredOrders.reduce((sum, o) => sum + o.totalAmountPaise, 0);
+        const pendingBillPaise = unfinishedOrders.reduce((sum, o) => sum + o.totalAmountPaise, 0);
+
+        return {
+          _id: session._id,
+          tableId: session.tableId,
+          tableNumber: session.tableNumber,
+          displayName: table?.displayName ?? `Table ${session.tableNumber}`,
+          tableIsActive: table?.isActive ?? true,
+          status: session.status,
+          openedAt: session.openedAt,
+          totalOrdersCount: orders.length,
+          deliveredOrdersCount: deliveredOrders.length,
+          unfinishedOrdersCount: unfinishedOrders.length,
+          cancelledOrdersCount: cancelledOrders.length,
+          runningBillPaise,
+          runningBillInr: runningBillPaise / 100,
+          pendingBillPaise,
+          pendingBillInr: pendingBillPaise / 100,
+          isReadyForClosure: unfinishedOrders.length === 0,
+        };
+      })
+    );
+
+    return results.sort((a, b) => a.tableNumber - b.tableNumber);
+  },
+});

@@ -2,21 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Moon, Sun } from "lucide-react";
-import { getSupabaseClient } from "@/lib/supabase/client";
+import { LogOut, Moon, Sun, Loader2 } from "lucide-react";
+import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import "./kitchen-dashboard.css";
 
 interface StaffClientLayoutProps {
   children: React.ReactNode;
-  userEmail: string;
-  role: "kitchen_staff" | "admin";
-  fullName: string;
 }
 
 const preferenceKey = "courista-kitchen-theme";
 
-export default function StaffClientLayout({ children, userEmail, role, fullName }: StaffClientLayoutProps) {
+export default function StaffClientLayout({ children }: StaffClientLayoutProps) {
   const router = useRouter();
+  const { signOut } = useAuthActions();
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+  const viewer = useQuery(api.users.viewer);
+
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
@@ -32,42 +35,86 @@ export default function StaffClientLayout({ children, userEmail, role, fullName 
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
+  // Authentication and role enforcement guard
+  useEffect(() => {
+    if (!authLoading && viewer !== undefined) {
+      if (!isAuthenticated || viewer === null) {
+        router.replace("/staff/login?error=unauthorized");
+        return;
+      }
+      if (viewer.role !== "kitchen_staff" && viewer.role !== "admin") {
+        router.replace("/staff/login?error=forbidden");
+      }
+    }
+  }, [authLoading, isAuthenticated, viewer, router]);
+
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    try { window.localStorage.setItem(preferenceKey, next); } catch { /* Keep the visible choice. */ }
+    try {
+      window.localStorage.setItem(preferenceKey, next);
+    } catch {
+      // Keep the visible choice.
+    }
   };
 
   const handleSignOut = async () => {
     try {
-      const supabase = getSupabaseClient();
-      if (supabase) await supabase.auth.signOut();
-      await fetch("/api/staff/auth/logout", { method: "POST" });
+      await signOut();
     } catch {
-      // Preserve the existing sign-out behavior if the network is unavailable.
+      // Preserve existing sign-out behavior
     }
     router.push("/staff/login");
     router.refresh();
   };
+
+  // While checking auth status or loading viewer profile, display clean loader
+  if (authLoading || viewer === undefined) {
+    return (
+      <div className="kitchen-shell" data-kitchen-theme={theme}>
+        <div className="min-h-screen flex items-center justify-center text-amber-500">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  // If unauthorized, do not render children
+  if (!isAuthenticated || !viewer || (viewer.role !== "kitchen_staff" && viewer.role !== "admin")) {
+    return null;
+  }
+
+  const fullName = viewer.name || (viewer.role === "admin" ? "Administrator" : "Kitchen Staff");
+  const userEmail = viewer.email || "staff@courista.cafe";
+  const roleLabel = viewer.role === "admin" ? "Manager" : "Kitchen staff";
 
   return (
     <div className="kitchen-shell" data-kitchen-theme={theme}>
       <header className="kitchen-header">
         <div className="kitchen-brand" aria-label="Courista Kitchen">
           <span className="kitchen-monogram">C</span>
-          <span><strong>Courista</strong><small>Kitchen dashboard</small></span>
+          <span>
+            <strong>Courista</strong>
+            <small>Kitchen dashboard</small>
+          </span>
         </div>
         <div className="kitchen-header-actions">
           <span className="kitchen-account" title={userEmail}>
-            <strong>{fullName}</strong><small>{role === "admin" ? "Manager" : "Kitchen staff"}</small>
+            <strong>{fullName}</strong>
+            <small>{roleLabel}</small>
           </span>
-          <button className="kitchen-utility" type="button" onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
+          <button
+            className="kitchen-utility"
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
           </button>
           <button className="kitchen-utility" type="button" onClick={handleSignOut}>
-            <LogOut size={17} /><span>Sign out</span>
+            <LogOut size={17} />
+            <span>Sign out</span>
           </button>
         </div>
       </header>

@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { getAdminClient } from "@/lib/supabase/admin";
-import { hasSupabaseConfigured } from "@/lib/supabase/client";
-import { getAppConfig } from "@/lib/config/env";
 
 export async function GET(request: NextRequest) {
   return handleQR(request);
@@ -12,17 +9,32 @@ export async function POST(request: NextRequest) {
   return handleQR(request);
 }
 
+function resolveConvexSiteUrl(): string {
+  const url =
+    process.env.NEXT_PUBLIC_CONVEX_SITE_URL ||
+    process.env.CONVEX_SITE_URL ||
+    (process.env.NEXT_PUBLIC_CONVEX_URL
+      ? process.env.NEXT_PUBLIC_CONVEX_URL.replace(/\.cloud$/, ".site")
+      : "");
+  return url.replace(/\/+$/, "");
+}
+
 async function handleQR(request: NextRequest) {
   let token: string | null = null;
-  
+  let slug: string | null = null;
+
   if (request.method === "GET") {
     token = request.nextUrl.searchParams.get("token");
+    slug =
+      request.nextUrl.searchParams.get("slug") ||
+      request.nextUrl.searchParams.get("table");
   } else if (request.method === "POST") {
     try {
-      const body = (await request.json()) as { token?: string };
+      const body = (await request.json()) as { token?: string; slug?: string; table?: string };
       token = body.token ?? null;
+      slug = body.slug ?? body.table ?? null;
     } catch {
-      // ignore
+      // ignore JSON parse error
     }
   }
 
@@ -30,18 +42,26 @@ async function handleQR(request: NextRequest) {
     return NextResponse.redirect(new URL("/table-invalid?reason=missing_token", request.url));
   }
 
-  // If Supabase is not configured, support local demo tokens for testing
-  const config = getAppConfig();
-  const isSupabaseReady = hasSupabaseConfigured() && Boolean(config.supabase?.serviceRoleKey);
-
-  if (!isSupabaseReady) {
-    // Local demo fallback: match table-X or default to table-1
+  // If table slug is not explicitly in parameters, deduce from token or pattern (e.g. table-6 or demo-table-6)
+  if (!slug) {
     const match = token.match(/table[_-]?(\d+)/i);
-    const tableNum = match ? match[1] : "1";
-    const response = NextResponse.redirect(new URL(`/table/table-${tableNum}`, request.url));
+    slug = match ? `table-${match[1]}` : "table-1";
+  }
+
+  const serverSecret = process.env.CONVEX_SERVER_SECRET;
+  const siteUrl = resolveConvexSiteUrl();
+
+  // If Convex environment is not configured, preserve local demo fallback
+  if (!serverSecret || !siteUrl) {
+    const response =
+      request.method === "POST"
+        ? NextResponse.json({ success: true, table_slug: slug, isDemo: true })
+        : NextResponse.redirect(new URL(`/table/${slug}`, request.url));
+
+    const demoToken = `demo-session-${crypto.randomBytes(16).toString("hex")}`;
     response.cookies.set({
       name: "cafe_customer_session",
-      value: `demo-session-${crypto.randomBytes(16).toString("hex")}`,
+      value: demoToken,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -52,77 +72,122 @@ async function handleQR(request: NextRequest) {
   }
 
   try {
-    const adminClient = getAdminClient();
-    const qrTokenHash = crypto.createHash("sha256").update(token).digest("hex");
-    
-    // Generate the customer token securely
-    const customerToken = crypto.randomBytes(32).toString("hex");
-    const customerTokenHash = crypto.createHash("sha256").update(customerToken).digest("hex");
+    // Generate secure customer tokens:
+    // rawCustomerWriteToken: Stored in HttpOnly cookie, authenticated by Next.js server route
+    // rawReadCapabilityToken: Stored in accessible cookie, passed to reactive Convex queries
+    const rawCustomerWriteToken = crypto.randomBytes(32).toString("hex");
+    const rawReadCapabilityToken = crypto.randomBytes(32).toString("hex");
 
-    // Call atomic RPC to resolve everything
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: sessionData, error: sessionError } = await (adminClient.rpc as any)('resolve_qr_scan', {
-      p_qr_token_hash: qrTokenHash,
-      p_customer_token_hash: customerTokenHash
+    const endpoint = `${siteUrl}/server/sessions/resolve-scan`;
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serverSecret}`,
+      },
+      body: JSON.stringify({
+        tableSlug: slug,
+        qrToken: token,
+        rawCustomerWriteToken,
+        rawReadCapabilityToken,
+      }),
     });
 
-    const sessionList = sessionData as Array<{ table_slug: string; table_order_session_id: string }> | null;
-    if (sessionError || !sessionList || sessionList.length === 0) {
-      console.error("[QR_ROUTE] RPC Error or Invalid Token:", sessionError);
+    const data = (await res.json()) as {
+      error?: string;
+      tableId?: string;
+      tableNumber?: number;
+      displayName?: string;
+      slug?: string;
+      tableOrderSessionId?: string;
+      customerScanSessionId?: string;
+      expiresAt?: number;
+    };
+
+    if (!res.ok || !data.customerScanSessionId) {
+      console.error("[QR_ROUTE] Convex resolve-scan error:", res.status, data.error);
+      if (data.error?.includes("TABLE_INACTIVE")) {
+        return NextResponse.redirect(new URL("/table-invalid?reason=table_inactive", request.url));
+      }
       return NextResponse.redirect(new URL("/table-invalid?reason=invalid_token", request.url));
     }
 
-    const { table_slug, table_order_session_id } = sessionList[0];
+    const resolvedSlug = data.slug || slug;
 
-    // Set HTTP-only secure cookies
-    // For GET requests we redirect, for POST we can return JSON
-    if (request.method === "POST") {
-      const response = NextResponse.json({ success: true, table_slug, table_order_session_id });
-      response.cookies.set({
-        name: "cafe_customer_session",
-        value: customerToken,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 12,
-      });
-      response.cookies.set({
-        name: "cafe_table_session_id",
-        value: table_order_session_id,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 12,
-      });
-      return response;
-    }
+    // Build response: POST returns JSON; GET redirects cleanly to /table/[slug]
+    const response =
+      request.method === "POST"
+        ? NextResponse.json({
+            success: true,
+            table_slug: resolvedSlug,
+            table_order_session_id: data.tableOrderSessionId,
+            customer_scan_session_id: data.customerScanSessionId,
+            table_number: data.tableNumber,
+          })
+        : NextResponse.redirect(new URL(`/table/${resolvedSlug}`, request.url));
 
-    const response = NextResponse.redirect(new URL(`/table/${table_slug}`, request.url));
+    const maxAgeSeconds = 60 * 60 * 12; // 12 hours
+
+    // 1. HttpOnly Write Token (customer write operations)
     response.cookies.set({
       name: "cafe_customer_session",
-      value: customerToken,
+      value: rawCustomerWriteToken,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 12,
+      maxAge: maxAgeSeconds,
     });
 
+    // 2. Client-accessible Read Capability Token (for Convex useQuery subscriptions)
     response.cookies.set({
-      name: "cafe_table_session_id",
-      value: table_order_session_id,
-      httpOnly: true,
+      name: "cafe_customer_read_token",
+      value: rawReadCapabilityToken,
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 12,
+      maxAge: maxAgeSeconds,
+    });
+
+    // 3. Client-accessible Customer Scan Session ID (for Convex useQuery subscriptions)
+    response.cookies.set({
+      name: "cafe_customer_scan_id",
+      value: data.customerScanSessionId,
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: maxAgeSeconds,
+    });
+
+    // 4. Client-accessible Table Order Session ID
+    if (data.tableOrderSessionId) {
+      response.cookies.set({
+        name: "cafe_table_session_id",
+        value: data.tableOrderSessionId,
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: maxAgeSeconds,
+      });
+    }
+
+    // 5. Client-accessible Table Slug
+    response.cookies.set({
+      name: "cafe_table_slug",
+      value: resolvedSlug,
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: maxAgeSeconds,
     });
 
     return response;
   } catch (err) {
-    console.error("[QR_ROUTE] Unexpected exception:", err);
+    console.error("[QR_ROUTE] Unexpected exception during scan resolution:", err);
     return NextResponse.redirect(new URL("/table-invalid?reason=server_error", request.url));
   }
 }

@@ -411,3 +411,34 @@ export const countActiveSessionsForTable = query({
   },
 });
 
+/**
+ * Seed all six standard dining tables if any are missing.
+ */
+export const seedAllTables = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    for (let tableNumber = 1; tableNumber <= 6; tableNumber++) {
+      const tableSlug = `table-${tableNumber}`;
+      const existing = await ctx.db
+        .query("tables")
+        .withIndex("by_slug", (q) => q.eq("slug", tableSlug))
+        .first();
+
+      if (!existing) {
+        const qrTokenHash = await sha256Hex(`table-${tableNumber}-secret`);
+        await ctx.db.insert("tables", {
+          tableNumber,
+          displayName: `Table ${tableNumber}`,
+          slug: tableSlug,
+          isActive: true,
+          qrTokenHash,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+  },
+});
+
+
