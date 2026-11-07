@@ -66,8 +66,9 @@ export default function AdminTablesPage() {
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
-      // 2. Compute SHA-256 hash for secure storage
-      const hashBuffer = await crypto.subtle.digest("SHA-256", rawBytes);
+      // 2. Compute SHA-256 hash for secure storage (hash the 64-char hex string to match Convex sha256Hex)
+      const tokenBuffer = new TextEncoder().encode(rawToken);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", tokenBuffer);
       const newQrTokenHash = Array.from(new Uint8Array(hashBuffer))
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
@@ -78,8 +79,8 @@ export default function AdminTablesPage() {
         newQrTokenHash,
       });
 
-      // 4. Construct customer scanning URL
-      const scanUrl = `${window.location.origin}/qr?token=${rawToken}`;
+      // 4. Construct customer scanning URL with both table slug and token
+      const scanUrl = `${window.location.origin}/qr?table=${table.slug}&token=${rawToken}`;
       setActiveQrModal({
         tableNumber: table.tableNumber,
         token: rawToken,

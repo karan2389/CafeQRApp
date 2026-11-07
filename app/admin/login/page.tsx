@@ -1,57 +1,64 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Coffee, Lock, Mail, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 
-export default function AdminLoginPage() {
+function AdminLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { signIn, signOut } = useAuthActions();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const viewer = useQuery(api.users.viewer);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(() => {
-    if (typeof window !== "undefined") {
-      const searchParams = new URLSearchParams(window.location.search);
-      const err = searchParams.get("error");
-      if (err === "forbidden") {
-        return "Access denied: You do not have administrator permissions.";
-      }
-      if (err === "unauthorized") {
-        return "Please sign in to access the administrator portal.";
-      }
-      if (err === "session_expired") {
-        return "Your session has expired. Please sign in again.";
-      }
-    }
-    return null;
-  });
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Compute error message from URL query params, role state, or local state
+  const urlParam = searchParams.get("error");
+  const urlParamError =
+    urlParam === "forbidden"
+      ? "Access denied: You do not have administrator permissions."
+      : urlParam === "unauthorized"
+      ? "Please sign in to access the administrator portal."
+      : urlParam === "session_expired"
+      ? "Your session has expired. Please sign in again."
+      : null;
+
+  const roleError =
+    isAuthenticated && viewer !== undefined
+      ? viewer === null
+        ? "Account is inactive or has no assigned role. Contact management."
+        : viewer.role !== "admin"
+        ? viewer.role === "kitchen_staff"
+          ? "Access denied: Kitchen staff accounts cannot access the administrator portal."
+          : "Access denied: You do not have administrator permissions."
+        : null
+      : null;
+
+  const displayError = error || roleError || urlParamError;
 
   // If already authenticated with admin permissions, redirect to admin dashboard
   useEffect(() => {
     if (isAuthenticated && viewer) {
       if (viewer.role === "admin") {
-        const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-        const rawRedirect = searchParams?.get("redirectTo") || "/admin";
+        const rawRedirect = searchParams.get("redirectTo") || "/admin";
         const redirectTo =
           rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") && !rawRedirect.includes(":")
             ? rawRedirect
             : "/admin";
         router.replace(redirectTo);
       } else if (viewer.role === "kitchen_staff") {
-        void signOut().then(() => {
-          router.replace("/admin/login?error=forbidden");
-        });
+        void signOut();
       }
     }
-  }, [isAuthenticated, viewer, router, signOut]);
+  }, [isAuthenticated, viewer, router, signOut, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,21 +66,19 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      await signIn("password", {
+      const result = await signIn("password", {
         email: email.trim().toLowerCase(),
         password,
         flow: "signIn",
       });
 
-      // Authentication state will update reactively; effect will redirect or verify role
-      const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-      const rawRedirect = searchParams?.get("redirectTo") || "/admin";
-      const redirectTo =
-        rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") && !rawRedirect.includes(":")
-          ? rawRedirect
-          : "/admin";
+      if (result && typeof result === "object" && "signingIn" in result && !result.signingIn) {
+        setError("Invalid email or password. Please verify your credentials.");
+        setLoading(false);
+        return;
+      }
 
-      router.replace(redirectTo);
+      // If signIn succeeded, useEffect will redirect once the reactive viewer role is verified
     } catch (err: unknown) {
       console.error("[AdminLogin] Authentication error:", err);
       const msg = err instanceof Error ? err.message : String(err);
@@ -81,13 +86,17 @@ export default function AdminLoginPage() {
         msg.includes("Could not find user") ||
         msg.includes("Invalid password") ||
         msg.includes("PasswordInvalid") ||
-        msg.includes("Account does not exist")
+        msg.includes("Account does not exist") ||
+        msg.includes("InvalidAccountId") ||
+        msg.includes("Invalid credentials") ||
+        msg.includes("InvalidSecret")
       ) {
-        setError("Invalid email or password.");
+        setError("Invalid email or password. Please check your credentials.");
+      } else if (msg.toLowerCase().includes("network") || msg.toLowerCase().includes("failed to fetch")) {
+        setError("Network error: Unable to connect to Convex backend. Please check your connection.");
       } else {
-        setError("Sign in failed. Please check your credentials or contact management.");
+        setError(msg || "Sign in failed. Please check your credentials or contact management.");
       }
-    } finally {
       setLoading(false);
     }
   };
@@ -111,10 +120,10 @@ export default function AdminLoginPage() {
           <p className="text-stone-400 text-sm">Manager & Kitchen Administration Portal</p>
         </div>
 
-        {error && (
+        {displayError && (
           <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl flex items-start gap-3 text-sm animate-in fade-in">
             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-red-400" />
-            <span>{error}</span>
+            <span>{displayError}</span>
           </div>
         )}
 
@@ -160,7 +169,7 @@ export default function AdminLoginPage() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-semibold py-2.5 rounded-xl transition-all shadow-md hover:shadow-amber-500/25 flex items-center justify-center gap-2 mt-2"
+            className="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-semibold py-2.5 rounded-xl transition-all shadow-md hover:shadow-amber-500/25 flex items-center justify-center gap-2 mt-2 cursor-pointer"
           >
             {loading ? (
               <>
@@ -183,5 +192,19 @@ export default function AdminLoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-stone-950 px-4 text-stone-100">
+          <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+        </div>
+      }
+    >
+      <AdminLoginForm />
+    </Suspense>
   );
 }
