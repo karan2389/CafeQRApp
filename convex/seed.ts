@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { sha256Hex } from "./auth_helpers";
 
@@ -360,9 +360,6 @@ export const seedAll = mutation({
   },
 });
 
-/**
- * Resets a user account's auth records so that a clean password can be re-provisioned.
- */
 export const resetUserForPasswordSync = mutation({
   args: {
     email: v.string(),
