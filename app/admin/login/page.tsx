@@ -193,9 +193,19 @@ function AdminLoginForm() {
           </Button>
         </form>
 
-        <div className="pt-4 border-t border-stone-800/80 text-center space-y-2">
+        <div className="pt-4 border-t border-stone-800/80 text-center space-y-3">
+          <button
+            type="button"
+            onClick={() => {
+              setEmail("admin@courista.cafe");
+              setPassword("Admin@EmberOak2026!");
+            }}
+            className="w-full py-2 px-3 text-xs font-medium rounded-lg bg-stone-800/70 hover:bg-stone-800 text-amber-400 hover:text-amber-300 border border-stone-700/60 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <span>⚡ Auto-fill Demo Admin Credentials</span>
+          </button>
           <p className="text-xs text-stone-400">
-            Default admin credentials: <span className="text-amber-400 font-mono">admin@courista.cafe</span> or <span className="text-amber-400 font-mono">admin@emberandoak.com</span>
+            Default credentials: <span className="text-amber-400 font-mono">admin@courista.cafe</span> &bull; Pass: <span className="text-amber-400 font-mono">Admin@EmberOak2026!</span>
           </p>
           <p className="text-xs text-stone-500">
             Courista Cafe Operating System · Ember & Oak

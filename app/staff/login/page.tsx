@@ -210,9 +210,19 @@ function StaffLoginForm() {
           </Button>
         </form>
 
-        <div className="pt-4 border-t border-stone-800/80 text-center space-y-2">
+        <div className="pt-4 border-t border-stone-800/80 text-center space-y-3">
+          <button
+            type="button"
+            onClick={() => {
+              setEmail("kitchen@courista.cafe");
+              setPassword("Kitchen@EmberOak2026!");
+            }}
+            className="w-full py-2 px-3 text-xs font-medium rounded-lg bg-stone-800/70 hover:bg-stone-800 text-amber-400 hover:text-amber-300 border border-stone-700/60 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <span>⚡ Auto-fill Demo Staff Credentials</span>
+          </button>
           <p className="text-xs text-stone-400">
-            Default staff credentials: <span className="text-amber-400 font-mono">kitchen@courista.cafe</span> or <span className="text-amber-400 font-mono">kitchen@emberandoak.com</span>
+            Default credentials: <span className="text-amber-400 font-mono">kitchen@courista.cafe</span> &bull; Pass: <span className="text-amber-400 font-mono">Kitchen@EmberOak2026!</span>
           </p>
           <p className="text-xs text-stone-500 leading-relaxed">
             Authorized dining floor & kitchen terminal for Courista. Access is audited and monitored.
