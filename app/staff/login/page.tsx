@@ -42,7 +42,7 @@ function StaffLoginForm() {
 
   const displayError = error || roleError || urlParamError;
 
-  // If authenticated with kitchen permissions, redirect to dashboard
+  // If already authenticated with kitchen permissions on mount, redirect to dashboard
   useEffect(() => {
     if (isAuthenticated && viewer) {
       if (viewer.role === "kitchen_staff" || viewer.role === "admin") {
@@ -74,7 +74,15 @@ function StaffLoginForm() {
         return;
       }
 
-      // If signIn succeeded, useEffect will redirect once the reactive viewer role is verified
+      // Hard redirect immediately upon successful token generation:
+      // Clears cached null viewer from unauthenticated state and mounts /staff fresh
+      const rawRedirect = searchParams.get("redirectTo") || "/staff";
+      const redirectTo =
+        rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") && !rawRedirect.includes(":")
+          ? rawRedirect
+          : "/staff";
+
+      window.location.href = redirectTo;
     } catch (err: unknown) {
       console.error("[StaffLogin] Authentication error:", err);
       const msg = err instanceof Error ? err.message : String(err);
@@ -151,7 +159,7 @@ function StaffLoginForm() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="chef@courista.cafe"
+                  placeholder="kitchen@courista.cafe"
                   className="w-full pl-11 pr-4 py-3 bg-stone-950/60 border border-stone-800 rounded-xl text-stone-100 placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all text-sm font-medium"
                 />
               </div>
@@ -202,7 +210,10 @@ function StaffLoginForm() {
           </Button>
         </form>
 
-        <div className="pt-4 border-t border-stone-800/80 text-center">
+        <div className="pt-4 border-t border-stone-800/80 text-center space-y-2">
+          <p className="text-xs text-stone-400">
+            Default staff credentials: <span className="text-amber-400 font-mono">kitchen@courista.cafe</span> or <span className="text-amber-400 font-mono">kitchen@emberandoak.com</span>
+          </p>
           <p className="text-xs text-stone-500 leading-relaxed">
             Authorized dining floor & kitchen terminal for Courista. Access is audited and monitored.
           </p>

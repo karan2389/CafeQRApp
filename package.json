@@ -24,6 +24,7 @@
     "test:kitchen-voice": "npx tsx scripts/verify-kitchen-voice.ts",
     "test:r2": "npx tsx --env-file=.env.local scripts/verify-r2.ts",
     "create-user": "npx tsx scripts/create-user.ts",
+    "seed:convex": "npx tsx scripts/seed-convex.ts",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

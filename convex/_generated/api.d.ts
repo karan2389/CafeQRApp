@@ -17,6 +17,7 @@ import type * as http from "../http.js";
 import type * as kitchen from "../kitchen.js";
 import type * as menu from "../menu.js";
 import type * as orders from "../orders.js";
+import type * as seed from "../seed.js";
 import type * as service_requests from "../service_requests.js";
 import type * as sessions from "../sessions.js";
 import type * as tables from "../tables.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   kitchen: typeof kitchen;
   menu: typeof menu;
   orders: typeof orders;
+  seed: typeof seed;
   service_requests: typeof service_requests;
   sessions: typeof sessions;
   tables: typeof tables;

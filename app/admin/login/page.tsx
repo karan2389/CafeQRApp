@@ -44,7 +44,7 @@ function AdminLoginForm() {
 
   const displayError = error || roleError || urlParamError;
 
-  // If already authenticated with admin permissions, redirect to admin dashboard
+  // If already authenticated with admin permissions on mount, redirect to admin dashboard
   useEffect(() => {
     if (isAuthenticated && viewer) {
       if (viewer.role === "admin") {
@@ -78,7 +78,15 @@ function AdminLoginForm() {
         return;
       }
 
-      // If signIn succeeded, useEffect will redirect once the reactive viewer role is verified
+      // Hard redirect immediately upon successful token generation:
+      // Clears cached null viewer from unauthenticated state and mounts /admin fresh
+      const rawRedirect = searchParams.get("redirectTo") || "/admin";
+      const redirectTo =
+        rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") && !rawRedirect.includes(":")
+          ? rawRedirect
+          : "/admin";
+
+      window.location.href = redirectTo;
     } catch (err: unknown) {
       console.error("[AdminLogin] Authentication error:", err);
       const msg = err instanceof Error ? err.message : String(err);
@@ -185,7 +193,10 @@ function AdminLoginForm() {
           </Button>
         </form>
 
-        <div className="pt-4 border-t border-stone-800/80 text-center">
+        <div className="pt-4 border-t border-stone-800/80 text-center space-y-2">
+          <p className="text-xs text-stone-400">
+            Default admin credentials: <span className="text-amber-400 font-mono">admin@courista.cafe</span> or <span className="text-amber-400 font-mono">admin@emberandoak.com</span>
+          </p>
           <p className="text-xs text-stone-500">
             Courista Cafe Operating System · Ember & Oak
           </p>
