@@ -26,14 +26,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Authentication and role enforcement guard
   useEffect(() => {
-    if (!authLoading && viewer !== undefined) {
-      if (!isAuthenticated || viewer === null) {
+    // 1. Wait while auth state is initializing from storage
+    if (authLoading) return;
+
+    // 2. If definitely unauthenticated, redirect to login
+    if (!isAuthenticated) {
+      router.replace("/admin/login?error=unauthorized");
+      return;
+    }
+
+    // 3. If authenticated, wait for viewer query to resolve
+    if (viewer === undefined) return;
+
+    // 4. If authenticated but viewer profile is temporarily null while WebSocket auth message completes
+    if (viewer === null) {
+      const timer = setTimeout(() => {
         router.replace("/admin/login?error=unauthorized");
-        return;
-      }
-      if (viewer.role !== "admin") {
-        router.replace("/admin/login?error=forbidden");
-      }
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+
+    // 5. If role is not admin, forbidden
+    if (viewer.role !== "admin") {
+      router.replace("/admin/login?error=forbidden");
     }
   }, [authLoading, isAuthenticated, viewer, router]);
 
@@ -55,7 +70,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   // While checking auth status or loading viewer profile, display clean loader
-  if (authLoading || viewer === undefined) {
+  if (authLoading || !isAuthenticated || viewer === undefined || (isAuthenticated && viewer === null)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-950 text-amber-500">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -64,7 +79,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   // If unauthorized, do not render children
-  if (!isAuthenticated || !viewer || viewer.role !== "admin") {
+  if (!viewer || viewer.role !== "admin") {
     return null;
   }
 

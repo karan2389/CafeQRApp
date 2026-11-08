@@ -86,7 +86,7 @@ function AdminLoginForm() {
           ? rawRedirect
           : "/admin";
 
-      window.location.href = redirectTo;
+      router.push(redirectTo);
     } catch (err: unknown) {
       console.error("[AdminLogin] Authentication error:", err);
       const msg = err instanceof Error ? err.message : String(err);

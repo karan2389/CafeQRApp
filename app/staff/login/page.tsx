@@ -82,7 +82,7 @@ function StaffLoginForm() {
           ? rawRedirect
           : "/staff";
 
-      window.location.href = redirectTo;
+      router.push(redirectTo);
     } catch (err: unknown) {
       console.error("[StaffLogin] Authentication error:", err);
       const msg = err instanceof Error ? err.message : String(err);
