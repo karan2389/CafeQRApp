@@ -35,18 +35,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    // 3. If authenticated, wait for viewer query to resolve
-    if (viewer === undefined) return;
+    // 3. If authenticated, wait until viewer profile is fetched from Convex
+    if (!viewer) return;
 
-    // 4. If authenticated but viewer profile is temporarily null while WebSocket auth message completes
-    if (viewer === null) {
-      const timer = setTimeout(() => {
-        router.replace("/admin/login?error=unauthorized");
-      }, 1200);
-      return () => clearTimeout(timer);
-    }
-
-    // 5. If role is not admin, forbidden
+    // 4. Role check: only admin is permitted
     if (viewer.role !== "admin") {
       router.replace("/admin/login?error=forbidden");
     }
@@ -70,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   // While checking auth status or loading viewer profile, display clean loader
-  if (authLoading || !isAuthenticated || viewer === undefined || (isAuthenticated && viewer === null)) {
+  if (authLoading || !isAuthenticated || !viewer) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-950 text-amber-500">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -79,7 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   // If unauthorized, do not render children
-  if (!viewer || viewer.role !== "admin") {
+  if (viewer.role !== "admin") {
     return null;
   }
 

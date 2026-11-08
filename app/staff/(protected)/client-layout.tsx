@@ -46,18 +46,10 @@ export default function StaffClientLayout({ children }: StaffClientLayoutProps) 
       return;
     }
 
-    // 3. If authenticated, wait for viewer query to resolve
-    if (viewer === undefined) return;
+    // 3. If authenticated, wait until viewer profile is fetched from Convex
+    if (!viewer) return;
 
-    // 4. If authenticated but viewer profile is temporarily null while WebSocket auth message completes
-    if (viewer === null) {
-      const timer = setTimeout(() => {
-        router.replace("/staff/login?error=unauthorized");
-      }, 1200);
-      return () => clearTimeout(timer);
-    }
-
-    // 5. If role is neither kitchen_staff nor admin, forbidden
+    // 4. Role check: only kitchen_staff and admin are permitted
     if (viewer.role !== "kitchen_staff" && viewer.role !== "admin") {
       router.replace("/staff/login?error=forbidden");
     }
@@ -84,7 +76,7 @@ export default function StaffClientLayout({ children }: StaffClientLayoutProps) 
   };
 
   // While checking auth status or loading viewer profile, display clean loader
-  if (authLoading || !isAuthenticated || viewer === undefined || (isAuthenticated && viewer === null)) {
+  if (authLoading || !isAuthenticated || !viewer) {
     return (
       <div className="kitchen-shell" data-kitchen-theme={theme}>
         <div className="min-h-screen flex items-center justify-center text-amber-500">
@@ -95,7 +87,7 @@ export default function StaffClientLayout({ children }: StaffClientLayoutProps) 
   }
 
   // If unauthorized, do not render children
-  if (!viewer || (viewer.role !== "kitchen_staff" && viewer.role !== "admin")) {
+  if (viewer.role !== "kitchen_staff" && viewer.role !== "admin") {
     return null;
   }
 
